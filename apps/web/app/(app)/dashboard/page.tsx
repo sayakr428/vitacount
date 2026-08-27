@@ -298,31 +298,25 @@ export default async function DashboardPage() {
         </BezelCard>
       </div>
 
-      {/* Project profitability (locked) + Exception alerts */}
+      {/* Project profitability + Exception alerts */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <BezelCard>
-          <h2 className="font-heading text-sm font-semibold">Project Profitability</h2>
-          <div className="relative mt-4 h-32 overflow-hidden rounded-lg">
-            <div className="flex h-full items-end gap-2 opacity-40">
-              {[40, 70, 55, 90, 60, 75, 50].map((h, i) => (
-                <div key={i} className="flex-1 rounded-t bg-muted-foreground" style={{ height: `${h}%` }} />
-              ))}
-            </div>
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-card/70 px-6 text-center backdrop-blur-sm">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-5 text-muted-foreground">
-                <rect x="5.5" y="10.5" width="13" height="9" rx="2" />
-                <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
-              </svg>
-              <p className="text-xs font-medium leading-tight">Track profitability across every project</p>
-              <button
-                type="button"
-                className="cursor-pointer rounded-full bg-primary px-3 py-1 text-[11px] font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary/90"
-              >
-                Upgrade
-              </button>
-            </div>
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-sm font-semibold">Project Profitability</h2>
+            <button type="button" className="cursor-pointer text-xs font-medium text-primary hover:underline">
+              View all
+            </button>
           </div>
-          <p className="mt-2 text-center text-[11px] text-muted-foreground">Available on the Growth plan</p>
+          <div className="mt-4 flex h-32 items-end gap-2">
+            {[40, 70, 55, 90, 60, 75, 50].map((h, i) => (
+              <div key={i} className="flex-1 rounded-t bg-primary/60" style={{ height: `${h}%` }} />
+            ))}
+          </div>
+          <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
+            <span>Retail Buildout</span>
+            <span>Website Redesign</span>
+            <span>Q3 Campaign</span>
+          </div>
         </BezelCard>
 
         <BezelCard>

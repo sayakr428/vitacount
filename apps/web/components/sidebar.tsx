@@ -9,7 +9,6 @@ type NavItem = {
   href: string;
   icon: (props: SVGProps<SVGSVGElement>) => ReactNode;
   badge?: string;
-  lockedPlan?: "Growth" | "Pro";
 };
 
 const iconProps = {
@@ -97,12 +96,6 @@ const icons = {
       <path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2M17.7 6.3l-1.4 1.4M7.7 16.3l-1.4 1.4M17.7 17.7l-1.4-1.4M7.7 7.7 6.3 6.3" />
     </svg>
   ),
-  lock: (p: SVGProps<SVGSVGElement>) => (
-    <svg {...iconProps} {...p}>
-      <rect x="5.5" y="10.5" width="13" height="9" rx="2" />
-      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
-    </svg>
-  ),
 };
 
 const primaryNav: NavItem[] = [
@@ -111,10 +104,10 @@ const primaryNav: NavItem[] = [
   { label: "Sales", href: "/sales", icon: icons.sales },
   { label: "Expenses", href: "/expenses", icon: icons.expenses },
   { label: "Banking", href: "/banking", icon: icons.banking },
-  { label: "Projects", href: "/projects", icon: icons.projects, lockedPlan: "Growth" },
-  { label: "Inventory", href: "/inventory", icon: icons.inventory, lockedPlan: "Growth" },
+  { label: "Projects", href: "/projects", icon: icons.projects },
+  { label: "Inventory", href: "/inventory", icon: icons.inventory },
   { label: "Reports", href: "/reports", icon: icons.reports },
-  { label: "Forecasting", href: "/forecasting", icon: icons.forecasting, lockedPlan: "Pro" },
+  { label: "Forecasting", href: "/forecasting", icon: icons.forecasting },
   { label: "Documents", href: "/documents", icon: icons.documents },
   { label: "Reconciliation", href: "/reconciliation", icon: icons.reconciliation, badge: "12" },
   { label: "Contacts", href: "/contacts", icon: icons.contacts },
@@ -126,18 +119,14 @@ const bottomNav: NavItem[] = [
 
 function NavRow({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon;
-  const locked = Boolean(item.lockedPlan);
 
   return (
     <Link
-      href={locked ? "#" : item.href}
-      aria-disabled={locked}
+      href={item.href}
       className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors duration-200 ${
         active
           ? "bg-primary/10 text-foreground"
-          : locked
-            ? "cursor-default text-muted-foreground/50"
-            : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+          : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
       }`}
     >
       {active && (
@@ -148,12 +137,6 @@ function NavRow({ item, active }: { item: NavItem; active: boolean }) {
       {item.badge && (
         <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-secondary-foreground">
           {item.badge}
-        </span>
-      )}
-      {locked && (
-        <span className="flex items-center gap-1 rounded-full border border-border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground/70">
-          <icons.lock className="size-2.5" />
-          {item.lockedPlan}
         </span>
       )}
     </Link>
