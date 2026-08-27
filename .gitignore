@@ -1,0 +1,19 @@
+# env
+.env
+.env.local
+.env.*.local
+
+# node
+node_modules/
+.pnpm-store/
+
+# next.js
+.next/
+out/
+
+# supabase
+supabase/.temp/
+
+# misc
+.DS_Store
+*.log

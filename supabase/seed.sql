@@ -1,0 +1,14 @@
+-- Local dev fixture seeding.
+--
+-- The default Chart of Accounts is NOT hardcoded here — it's defined once in
+-- the migration-owned function `seed_default_chart_of_accounts(tenant_id)`
+-- (see supabase/migrations/20260827195029_financial_core_default_coa_fix_quoting.sql)
+-- and called automatically by `create_tenant()` on every signup. That keeps
+-- the account list in one place instead of drifting between this file and
+-- the function.
+--
+-- This file intentionally does not seed a demo tenant: a tenant needs an
+-- owner membership tied to a real `auth.users` row, and auth users are
+-- GoTrue-managed (not something `supabase db reset` can safely fabricate).
+-- To get a demo workspace with data, sign up through the app — that goes
+-- through create_tenant() and gets the real Chart of Accounts for free.
