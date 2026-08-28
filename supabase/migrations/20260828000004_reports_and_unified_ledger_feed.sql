@@ -13,7 +13,7 @@ select
   'Invoice #' || i.invoice_number as description,
   i.created_at as created_at
 from public.invoices i
-left join public.contacts c on c.id = i.customer_id
+left join public.contacts c on c.id = i.contact_id
 
 union all
 
@@ -28,7 +28,7 @@ select
   'Bill #' || b.bill_number as description,
   b.created_at as created_at
 from public.bills b
-left join public.contacts c on c.id = b.vendor_id
+left join public.contacts c on c.id = b.contact_id
 
 union all
 
@@ -58,7 +58,7 @@ select
   'Customer Payment Received (' || pr.method || ')' as description,
   pr.created_at as created_at
 from public.payments_received pr
-left join public.contacts c on c.id = pr.customer_id
+left join public.contacts c on c.id = pr.contact_id
 
 union all
 
@@ -73,7 +73,7 @@ select
   'Vendor Payment Made (' || pm.method || ')' as description,
   pm.created_at as created_at
 from public.payments_made pm
-left join public.contacts c on c.id = pm.vendor_id;
+left join public.contacts c on c.id = pm.contact_id;
 
 -- Grant select to authenticated users on view
 grant select on public.unified_transactions_feed to authenticated;
