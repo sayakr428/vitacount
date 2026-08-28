@@ -52,7 +52,7 @@ begin
 end;
 $$;
 
-drop trigger if exists "on_auth_user_created" on auth.users;
+drop trigger if exists "on_auth_user_created" on auth;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
@@ -340,6 +340,7 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists "check_balanced" on journal_entry_lines;
 create constraint trigger check_balanced
   after insert or update on journal_entry_lines
   deferrable initially deferred
