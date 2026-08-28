@@ -26,9 +26,24 @@ export async function uploadDocumentAction(formData: FormData) {
   const storagePath = `${activeTenantId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
   // 1. Upload file to Supabase Storage
-  const { error: uploadError } = await supabase.storage
+  let { error: uploadError } = await supabase.storage
     .from("receipts")
     .upload(storagePath, file, { contentType: file.type });
+
+  // Fallback: If bucket is missing, attempt auto-creation via admin client
+  if (uploadError && (uploadError.message?.toLowerCase().includes("bucket") || uploadError.message?.toLowerCase().includes("not found"))) {
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const adminSupabase = createAdminClient();
+      await adminSupabase.storage.createBucket("receipts", { public: true });
+      const retry = await adminSupabase.storage
+        .from("receipts")
+        .upload(storagePath, file, { contentType: file.type });
+      uploadError = retry.error;
+    } catch (e) {
+      console.warn("Auto bucket creation fallback skipped or failed:", e);
+    }
+  }
 
   if (uploadError) {
     console.error("Storage upload error:", uploadError);
