@@ -1,13 +1,16 @@
-﻿-- Session 2: profiles, tenants, memberships + RLS + onboarding/invite helpers
+-- ==========================================
+-- File: 20260827193521_auth_foundation.sql
+-- ==========================================
+-- Session 2: profiles, tenants, memberships + RLS + onboarding/invite helpers
 
-create table profiles (
+create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text,
   avatar_url text,
   created_at timestamptz not null default now()
 );
 
-create table tenants (
+create table if not exists tenants (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   plan_tier text not null default 'starter' check (plan_tier in ('starter','growth','pro')),
@@ -16,7 +19,7 @@ create table tenants (
   created_at timestamptz not null default now()
 );
 
-create table memberships (
+create table if not exists memberships (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -27,8 +30,8 @@ create table memberships (
   unique (tenant_id, user_id)
 );
 
-create index memberships_user_tenant_idx on memberships (user_id, tenant_id);
-create index memberships_tenant_idx on memberships (tenant_id);
+create index if not exists memberships_user_tenant_idx on memberships (user_id, tenant_id);
+create index if not exists memberships_tenant_idx on memberships (tenant_id);
 
 -- auto-create a profile row whenever a new auth user is created
 create or replace function public.handle_new_user()
@@ -49,6 +52,7 @@ begin
 end;
 $$;
 
+drop trigger if exists "on_auth_user_created" on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
@@ -141,42 +145,57 @@ alter table profiles enable row level security;
 alter table tenants enable row level security;
 alter table memberships enable row level security;
 
+drop policy if exists "profiles_select" on profiles;
 create policy "profiles_select" on profiles
   for select using (
     id = auth.uid()
     or id in (select user_id from memberships where tenant_id in (select current_tenant_ids()))
   );
 
+drop policy if exists "profiles_update_own" on profiles;
 create policy "profiles_update_own" on profiles
   for update using (id = auth.uid())
   with check (id = auth.uid());
 
+drop policy if exists "tenants_select" on tenants;
 create policy "tenants_select" on tenants
   for select using (id in (select current_member_tenant_ids()));
 
+drop policy if exists "tenants_update_admin" on tenants;
 create policy "tenants_update_admin" on tenants
   for update using (id in (select current_admin_tenant_ids()))
   with check (id in (select current_admin_tenant_ids()));
 
+drop policy if exists "memberships_select" on memberships;
 create policy "memberships_select" on memberships
   for select using (
     tenant_id in (select current_tenant_ids())
     or user_id = auth.uid()
   );
 
+drop policy if exists "memberships_insert_admin" on memberships;
 create policy "memberships_insert_admin" on memberships
   for insert with check (tenant_id in (select current_admin_tenant_ids()));
 
+drop policy if exists "memberships_update_admin" on memberships;
 create policy "memberships_update_admin" on memberships
   for update using (tenant_id in (select current_admin_tenant_ids()))
   with check (tenant_id in (select current_admin_tenant_ids()));
 
+drop policy if exists "memberships_update_self_accept" on memberships;
 create policy "memberships_update_self_accept" on memberships
   for update using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
+drop policy if exists "memberships_delete_admin" on memberships;
 create policy "memberships_delete_admin" on memberships
   for delete using (tenant_id in (select current_admin_tenant_ids()));
+
+
+
+-- ==========================================
+-- File: 20260827193547_auth_foundation_lockdown_function_grants.sql
+-- ==========================================
 -- Functions default to PUBLIC-executable; lock these down to authenticated only
 -- (handle_new_user is trigger-only and needs no explicit grant at all).
 
@@ -186,7 +205,19 @@ revoke execute on function public.current_admin_tenant_ids() from public, anon;
 revoke execute on function public.current_member_tenant_ids() from public, anon;
 revoke execute on function public.create_tenant(text) from public, anon;
 revoke execute on function public.accept_invite(uuid) from public, anon;
+
+
+
+-- ==========================================
+-- File: 20260827193611_auth_foundation_lockdown_handle_new_user.sql
+-- ==========================================
 revoke execute on function public.handle_new_user() from public, anon, authenticated;
+
+
+
+-- ==========================================
+-- File: 20260827194042_auth_foundation_lookup_user_by_email.sql
+-- ==========================================
 -- Lets an owner/admin resolve an existing auth user by email, so the invite
 -- flow can add an already-registered person to a second tenant without
 -- Supabase's inviteUserByEmail erroring on a duplicate account.
@@ -213,9 +244,15 @@ $$;
 
 revoke execute on function public.lookup_user_id_by_email(text) from public, anon;
 grant execute on function public.lookup_user_id_by_email(text) to authenticated;
--- Session 3: Financial Core â€” Chart of Accounts, dimensions, periods, GL
 
-create table accounts (
+
+
+-- ==========================================
+-- File: 20260827194928_financial_core.sql
+-- ==========================================
+-- Session 3: Financial Core — Chart of Accounts, dimensions, periods, GL
+
+create table if not exists accounts (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   code text not null,
@@ -228,14 +265,14 @@ create table accounts (
   unique (tenant_id, code)
 );
 
-create table dimension_types (
+create table if not exists dimension_types (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   name text not null,
   is_active boolean not null default true
 );
 
-create table dimension_values (
+create table if not exists dimension_values (
   id uuid primary key default gen_random_uuid(),
   dimension_type_id uuid not null references dimension_types(id),
   tenant_id uuid not null references tenants(id),
@@ -243,7 +280,7 @@ create table dimension_values (
   is_active boolean not null default true
 );
 
-create table periods (
+create table if not exists periods (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   start_date date not null,
@@ -252,7 +289,7 @@ create table periods (
   unique (tenant_id, start_date, end_date)
 );
 
-create table journal_entries (
+create table if not exists journal_entries (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   entry_date date not null,
@@ -267,7 +304,7 @@ create table journal_entries (
   created_at timestamptz not null default now()
 );
 
-create table journal_entry_lines (
+create table if not exists journal_entry_lines (
   id uuid primary key default gen_random_uuid(),
   journal_entry_id uuid not null references journal_entries(id) on delete cascade,
   account_id uuid not null references accounts(id),
@@ -277,17 +314,17 @@ create table journal_entry_lines (
   check (debit >= 0 and credit >= 0 and not (debit > 0 and credit > 0))
 );
 
-create table journal_entry_line_dimensions (
+create table if not exists journal_entry_line_dimensions (
   journal_entry_line_id uuid not null references journal_entry_lines(id) on delete cascade,
   dimension_value_id uuid not null references dimension_values(id),
   primary key (journal_entry_line_id, dimension_value_id)
 );
 
-create index accounts_tenant_idx on accounts (tenant_id);
-create index journal_entries_tenant_date_idx on journal_entries (tenant_id, entry_date);
-create index journal_entry_lines_entry_idx on journal_entry_lines (journal_entry_id);
-create index journal_entry_lines_account_idx on journal_entry_lines (account_id);
-create index journal_entry_lines_tenant_account_idx on journal_entry_lines (journal_entry_id, account_id);
+create index if not exists accounts_tenant_idx on accounts (tenant_id);
+create index if not exists journal_entries_tenant_date_idx on journal_entries (tenant_id, entry_date);
+create index if not exists journal_entry_lines_entry_idx on journal_entry_lines (journal_entry_id);
+create index if not exists journal_entry_lines_account_idx on journal_entry_lines (account_id);
+create index if not exists journal_entry_lines_tenant_account_idx on journal_entry_lines (journal_entry_id, account_id);
 
 -- Posting-engine invariant: it is structurally impossible to post an unbalanced entry.
 create or replace function enforce_balanced_entry() returns trigger as $$
@@ -317,26 +354,43 @@ alter table journal_entries enable row level security;
 alter table journal_entry_lines enable row level security;
 alter table journal_entry_line_dimensions enable row level security;
 
+drop policy if exists "accounts_select" on accounts;
 create policy "accounts_select" on accounts for select using (tenant_id in (select current_tenant_ids()));
+drop policy if exists "accounts_insert" on accounts;
 create policy "accounts_insert" on accounts for insert with check (tenant_id in (select current_tenant_ids()));
+drop policy if exists "accounts_update" on accounts;
 create policy "accounts_update" on accounts for update using (tenant_id in (select current_tenant_ids())) with check (tenant_id in (select current_tenant_ids()));
+drop policy if exists "accounts_delete" on accounts;
 create policy "accounts_delete" on accounts for delete using (tenant_id in (select current_admin_tenant_ids()));
 
+drop policy if exists "dimension_types_select" on dimension_types;
 create policy "dimension_types_select" on dimension_types for select using (tenant_id in (select current_tenant_ids()));
+drop policy if exists "dimension_types_write" on dimension_types;
 create policy "dimension_types_write" on dimension_types for insert with check (tenant_id in (select current_tenant_ids()));
+drop policy if exists "dimension_types_update" on dimension_types;
 create policy "dimension_types_update" on dimension_types for update using (tenant_id in (select current_tenant_ids())) with check (tenant_id in (select current_tenant_ids()));
+drop policy if exists "dimension_types_delete" on dimension_types;
 create policy "dimension_types_delete" on dimension_types for delete using (tenant_id in (select current_admin_tenant_ids()));
 
+drop policy if exists "dimension_values_select" on dimension_values;
 create policy "dimension_values_select" on dimension_values for select using (tenant_id in (select current_tenant_ids()));
+drop policy if exists "dimension_values_write" on dimension_values;
 create policy "dimension_values_write" on dimension_values for insert with check (tenant_id in (select current_tenant_ids()));
+drop policy if exists "dimension_values_update" on dimension_values;
 create policy "dimension_values_update" on dimension_values for update using (tenant_id in (select current_tenant_ids())) with check (tenant_id in (select current_tenant_ids()));
+drop policy if exists "dimension_values_delete" on dimension_values;
 create policy "dimension_values_delete" on dimension_values for delete using (tenant_id in (select current_admin_tenant_ids()));
 
+drop policy if exists "periods_select" on periods;
 create policy "periods_select" on periods for select using (tenant_id in (select current_tenant_ids()));
+drop policy if exists "periods_write" on periods;
 create policy "periods_write" on periods for insert with check (tenant_id in (select current_admin_tenant_ids()));
+drop policy if exists "periods_update" on periods;
 create policy "periods_update" on periods for update using (tenant_id in (select current_admin_tenant_ids())) with check (tenant_id in (select current_admin_tenant_ids()));
 
+drop policy if exists "journal_entries_select" on journal_entries;
 create policy "journal_entries_select" on journal_entries for select using (tenant_id in (select current_tenant_ids()));
+drop policy if exists "only_accountant_plus_can_post_journal_entries" on journal_entries;
 create policy "only_accountant_plus_can_post_journal_entries" on journal_entries
   for insert with check (
     tenant_id in (
@@ -344,6 +398,7 @@ create policy "only_accountant_plus_can_post_journal_entries" on journal_entries
       where user_id = auth.uid() and status = 'active' and role in ('owner','admin','accountant')
     )
   );
+drop policy if exists "journal_entries_update" on journal_entries;
 create policy "journal_entries_update" on journal_entries
   for update using (
     tenant_id in (
@@ -357,10 +412,12 @@ create policy "journal_entries_update" on journal_entries
     )
   );
 
+drop policy if exists "journal_entry_lines_select" on journal_entry_lines;
 create policy "journal_entry_lines_select" on journal_entry_lines
   for select using (
     journal_entry_id in (select id from journal_entries where tenant_id in (select current_tenant_ids()))
   );
+drop policy if exists "journal_entry_lines_insert" on journal_entry_lines;
 create policy "journal_entry_lines_insert" on journal_entry_lines
   for insert with check (
     journal_entry_id in (
@@ -369,6 +426,7 @@ create policy "journal_entry_lines_insert" on journal_entry_lines
       where m.user_id = auth.uid() and m.status = 'active' and m.role in ('owner','admin','accountant')
     )
   );
+drop policy if exists "journal_entry_lines_delete" on journal_entry_lines;
 create policy "journal_entry_lines_delete" on journal_entry_lines
   for delete using (
     journal_entry_id in (
@@ -378,6 +436,7 @@ create policy "journal_entry_lines_delete" on journal_entry_lines
     )
   );
 
+drop policy if exists "journal_entry_line_dimensions_select" on journal_entry_line_dimensions;
 create policy "journal_entry_line_dimensions_select" on journal_entry_line_dimensions
   for select using (
     journal_entry_line_id in (
@@ -386,6 +445,7 @@ create policy "journal_entry_line_dimensions_select" on journal_entry_line_dimen
       where je.tenant_id in (select current_tenant_ids())
     )
   );
+drop policy if exists "journal_entry_line_dimensions_insert" on journal_entry_line_dimensions;
 create policy "journal_entry_line_dimensions_insert" on journal_entry_line_dimensions
   for insert with check (
     journal_entry_line_id in (
@@ -395,13 +455,19 @@ create policy "journal_entry_line_dimensions_insert" on journal_entry_line_dimen
       where m.user_id = auth.uid() and m.status = 'active' and m.role in ('owner','admin','accountant')
     )
   );
+
+
+
+-- ==========================================
+-- File: 20260827195004_financial_core_default_coa.sql
+-- ==========================================
 -- Default US Chart of Accounts, seeded automatically on tenant creation.
 --
--- NOTE: this version has a bug â€” "Owner's Equity" below uses double quotes,
+-- NOTE: this version has a bug — "Owner's Equity" below uses double quotes,
 -- which Postgres parses as a quoted *identifier*, not a string literal. It
 -- was caught immediately (before any real tenant relied on it) and fixed in
 -- the next migration (financial_core_default_coa_fix_quoting). Kept as-is
--- here since migrations are an append-only log â€” see CONTEXT_LOG.md.
+-- here since migrations are an append-only log — see CONTEXT_LOG.md.
 
 create or replace function public.seed_default_chart_of_accounts(p_tenant_id uuid)
 returns void
@@ -463,6 +529,12 @@ begin
   return new_tenant_id;
 end;
 $$;
+
+
+
+-- ==========================================
+-- File: 20260827195029_financial_core_default_coa_fix_quoting.sql
+-- ==========================================
 -- Fixes the "Owner's Equity" identifier/string-literal bug from the previous
 -- migration (double-quoted -> properly escaped single-quoted string).
 create or replace function public.seed_default_chart_of_accounts(p_tenant_id uuid)
@@ -498,6 +570,12 @@ begin
     (p_tenant_id, '6900', 'Uncategorized Expense', 'expense', 'operating_expense');
 end;
 $$;
+
+
+
+-- ==========================================
+-- File: 20260827195134_financial_core_fix_trigger_search_path.sql
+-- ==========================================
 create or replace function enforce_balanced_entry() returns trigger as $$
 declare total_debit numeric; total_credit numeric;
 begin
@@ -510,8 +588,14 @@ begin
   return new;
 end;
 $$ language plpgsql set search_path = public;
+
+
+
+-- ==========================================
+-- File: 20260827195329_financial_core_post_manual_journal_entry.sql
+-- ==========================================
 -- Runs as the caller (not security definer), so the existing RLS policies on
--- journal_entries/journal_entry_lines are the real authorization check â€” this
+-- journal_entries/journal_entry_lines are the real authorization check — this
 -- function's only job is making the header + lines insert one transaction,
 -- so the deferred balanced-entry trigger rolls back the whole entry, not
 -- just the lines, if it fails.
@@ -550,6 +634,12 @@ $$;
 
 grant execute on function public.post_manual_journal_entry(uuid, date, text, jsonb) to authenticated;
 revoke execute on function public.post_manual_journal_entry(uuid, date, text, jsonb) from public, anon;
+
+
+
+-- ==========================================
+-- File: 20260827204327_contacts_and_ar.sql
+-- ==========================================
 -- Session 4: Contacts + Accounts Receivable
 --
 -- Schema deviations from project.md Part 2.3/2.4, both documented in CONTEXT_LOG.md:
@@ -560,9 +650,9 @@ revoke execute on function public.post_manual_journal_entry(uuid, date, text, js
 --   - tenants.default_tax_rate is a new column: the flat-rate placeholder tax calc the
 --     playbook calls for (TaxJar/Avalara integration is explicitly deferred post-MVP).
 
-alter table tenants add column default_tax_rate numeric(6,4) not null default 0;
+alter table tenants add column if not exists default_tax_rate numeric(6,4) not null default 0;
 
-create table contacts (
+create table if not exists contacts (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   type text not null check (type in ('customer', 'vendor', 'both')),
@@ -578,9 +668,9 @@ create table contacts (
   created_at timestamptz not null default now()
 );
 
-create index contacts_tenant_idx on contacts (tenant_id);
+create index if not exists contacts_tenant_idx on contacts (tenant_id);
 
-create table invoices (
+create table if not exists invoices (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   contact_id uuid not null references contacts(id),
@@ -599,11 +689,11 @@ create table invoices (
   unique (tenant_id, invoice_number)
 );
 
-create index invoices_tenant_idx on invoices (tenant_id);
-create index invoices_contact_idx on invoices (contact_id);
-create index invoices_tenant_status_idx on invoices (tenant_id, status);
+create index if not exists invoices_tenant_idx on invoices (tenant_id);
+create index if not exists invoices_contact_idx on invoices (contact_id);
+create index if not exists invoices_tenant_status_idx on invoices (tenant_id, status);
 
-create table invoice_lines (
+create table if not exists invoice_lines (
   id uuid primary key default gen_random_uuid(),
   invoice_id uuid not null references invoices(id) on delete cascade,
   item_id uuid,
@@ -615,9 +705,9 @@ create table invoice_lines (
   sort_order int not null default 0
 );
 
-create index invoice_lines_invoice_idx on invoice_lines (invoice_id);
+create index if not exists invoice_lines_invoice_idx on invoice_lines (invoice_id);
 
-create table payments_received (
+create table if not exists payments_received (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   contact_id uuid not null references contacts(id),
@@ -630,21 +720,21 @@ create table payments_received (
   created_at timestamptz not null default now()
 );
 
-create index payments_received_tenant_idx on payments_received (tenant_id);
-create index payments_received_contact_idx on payments_received (contact_id);
+create index if not exists payments_received_tenant_idx on payments_received (tenant_id);
+create index if not exists payments_received_contact_idx on payments_received (contact_id);
 
-create table payment_applications (
+create table if not exists payment_applications (
   id uuid primary key default gen_random_uuid(),
   payment_id uuid not null references payments_received(id) on delete cascade,
   invoice_id uuid not null references invoices(id),
   amount_applied numeric(14, 2) not null
 );
 
-create index payment_applications_payment_idx on payment_applications (payment_id);
-create index payment_applications_invoice_idx on payment_applications (invoice_id);
+create index if not exists payment_applications_payment_idx on payment_applications (payment_id);
+create index if not exists payment_applications_invoice_idx on payment_applications (invoice_id);
 
 -- next_invoice_number: simple per-tenant sequential numbering, "INV-0001" style.
--- Not gap-free under concurrent inserts (no advisory lock) â€” acceptable for MVP
+-- Not gap-free under concurrent inserts (no advisory lock) — acceptable for MVP
 -- invoice numbering, which only needs to be unique and roughly sequential, not
 -- a strict audit-grade sequence.
 create or replace function public.next_invoice_number(p_tenant_id uuid)
@@ -667,46 +757,68 @@ alter table invoice_lines enable row level security;
 alter table payments_received enable row level security;
 alter table payment_applications enable row level security;
 
+drop policy if exists "contacts_select" on contacts;
 create policy "contacts_select" on contacts for select using (tenant_id in (select current_tenant_ids()));
+drop policy if exists "contacts_insert" on contacts;
 create policy "contacts_insert" on contacts for insert with check (tenant_id in (select current_tenant_ids()));
+drop policy if exists "contacts_update" on contacts;
 create policy "contacts_update" on contacts for update using (tenant_id in (select current_tenant_ids())) with check (tenant_id in (select current_tenant_ids()));
+drop policy if exists "contacts_delete" on contacts;
 create policy "contacts_delete" on contacts for delete using (tenant_id in (select current_admin_tenant_ids()));
 
+drop policy if exists "invoices_select" on invoices;
 create policy "invoices_select" on invoices for select using (tenant_id in (select current_tenant_ids()));
+drop policy if exists "invoices_insert" on invoices;
 create policy "invoices_insert" on invoices for insert with check (tenant_id in (select current_tenant_ids()));
+drop policy if exists "invoices_update" on invoices;
 create policy "invoices_update" on invoices for update using (tenant_id in (select current_tenant_ids())) with check (tenant_id in (select current_tenant_ids()));
+drop policy if exists "invoices_delete" on invoices;
 create policy "invoices_delete" on invoices for delete using (tenant_id in (select current_admin_tenant_ids()) and status = 'draft');
 
+drop policy if exists "invoice_lines_select" on invoice_lines;
 create policy "invoice_lines_select" on invoice_lines for select using (
   invoice_id in (select id from invoices where tenant_id in (select current_tenant_ids()))
 );
+drop policy if exists "invoice_lines_insert" on invoice_lines;
 create policy "invoice_lines_insert" on invoice_lines for insert with check (
   invoice_id in (select id from invoices where tenant_id in (select current_tenant_ids()))
 );
+drop policy if exists "invoice_lines_update" on invoice_lines;
 create policy "invoice_lines_update" on invoice_lines for update using (
   invoice_id in (select id from invoices where tenant_id in (select current_tenant_ids()))
 ) with check (
   invoice_id in (select id from invoices where tenant_id in (select current_tenant_ids()))
 );
+drop policy if exists "invoice_lines_delete" on invoice_lines;
 create policy "invoice_lines_delete" on invoice_lines for delete using (
   invoice_id in (select id from invoices where tenant_id in (select current_tenant_ids()))
 );
 
+drop policy if exists "payments_received_select" on payments_received;
 create policy "payments_received_select" on payments_received for select using (tenant_id in (select current_tenant_ids()));
+drop policy if exists "payments_received_insert" on payments_received;
 create policy "payments_received_insert" on payments_received for insert with check (tenant_id in (select current_tenant_ids()));
 
+drop policy if exists "payment_applications_select" on payment_applications;
 create policy "payment_applications_select" on payment_applications for select using (
   payment_id in (select id from payments_received where tenant_id in (select current_tenant_ids()))
 );
+drop policy if exists "payment_applications_insert" on payment_applications;
 create policy "payment_applications_insert" on payment_applications for insert with check (
   payment_id in (select id from payments_received where tenant_id in (select current_tenant_ids()))
 );
+
+
+
+-- ==========================================
+-- File: 20260827204356_ar_posting_functions.sql
+-- ==========================================
 -- Session 4: AR posting functions.
 --
 -- Both are SECURITY DEFINER, deliberately unlike post_manual_journal_entry (Session 3).
 -- Rationale (also in CONTEXT_LOG.md): a manual journal entry in CPA Mode is a direct
 -- ledger action and correctly requires owner/admin/accountant per journal_entries' RLS.
--- Issuing an invoice or recording a payment is a normal Owner Mode business action â€”
+-- Issuing an invoice or recording a payment is a normal Owner Mode business action —
 -- per project.md's "complexity grows invisibly" principle, any active tenant member
 -- who can create an invoice should be able to trigger its (correct, structurally
 -- balanced) GL posting without also needing accountant-level ledger permissions.
@@ -780,7 +892,7 @@ grant execute on function public.post_invoice_issued(uuid) to authenticated;
 -- Records a payment against one or more invoices, applies it, and posts the GL entry
 -- in one transaction. Callable both by an authenticated member (manual "record payment")
 -- and by the service-role client from the Stripe webhook handler (auth.uid() is null
--- there, so the membership check is skipped for service_role â€” the webhook route itself
+-- there, so the membership check is skipped for service_role — the webhook route itself
 -- is the auth boundary in that path, gated on Stripe's signature verification).
 create or replace function public.post_payment_received(
   p_tenant_id uuid,
@@ -872,13 +984,19 @@ $$;
 
 grant execute on function public.post_payment_received(uuid, uuid, date, numeric, text, text, text, jsonb) to authenticated;
 grant execute on function public.post_payment_received(uuid, uuid, date, numeric, text, text, text, jsonb) to service_role;
+
+
+
+-- ==========================================
+-- File: 20260827204414_accounts_payable.sql
+-- ==========================================
 -- Session 5: Accounts Payable, mirroring Session 4's pattern.
 --
 -- Same documented deviation as invoices: bills.project_id has no FK yet (Projects
 -- module unbuilt); bill_lines.item_id likewise (Inventory module unbuilt);
 -- bills.source_document_id likewise (Documents module lands in Session 6).
 
-create table bills (
+create table if not exists bills (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   vendor_id uuid not null references contacts(id),
@@ -894,11 +1012,11 @@ create table bills (
   created_at timestamptz not null default now()
 );
 
-create index bills_tenant_idx on bills (tenant_id);
-create index bills_vendor_idx on bills (vendor_id);
-create index bills_tenant_status_idx on bills (tenant_id, status);
+create index if not exists bills_tenant_idx on bills (tenant_id);
+create index if not exists bills_vendor_idx on bills (vendor_id);
+create index if not exists bills_tenant_status_idx on bills (tenant_id, status);
 
-create table bill_lines (
+create table if not exists bill_lines (
   id uuid primary key default gen_random_uuid(),
   bill_id uuid not null references bills(id) on delete cascade,
   account_id uuid references accounts(id),
@@ -910,9 +1028,9 @@ create table bill_lines (
   sort_order int not null default 0
 );
 
-create index bill_lines_bill_idx on bill_lines (bill_id);
+create index if not exists bill_lines_bill_idx on bill_lines (bill_id);
 
-create table payments_made (
+create table if not exists payments_made (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   vendor_id uuid not null references contacts(id),
@@ -924,18 +1042,18 @@ create table payments_made (
   created_at timestamptz not null default now()
 );
 
-create index payments_made_tenant_idx on payments_made (tenant_id);
-create index payments_made_vendor_idx on payments_made (vendor_id);
+create index if not exists payments_made_tenant_idx on payments_made (tenant_id);
+create index if not exists payments_made_vendor_idx on payments_made (vendor_id);
 
-create table bill_payment_applications (
+create table if not exists bill_payment_applications (
   id uuid primary key default gen_random_uuid(),
   payment_id uuid not null references payments_made(id) on delete cascade,
   bill_id uuid not null references bills(id),
   amount_applied numeric(14, 2) not null
 );
 
-create index bill_payment_applications_payment_idx on bill_payment_applications (payment_id);
-create index bill_payment_applications_bill_idx on bill_payment_applications (bill_id);
+create index if not exists bill_payment_applications_payment_idx on bill_payment_applications (payment_id);
+create index if not exists bill_payment_applications_bill_idx on bill_payment_applications (bill_id);
 
 -- RLS
 alter table bills enable row level security;
@@ -943,35 +1061,52 @@ alter table bill_lines enable row level security;
 alter table payments_made enable row level security;
 alter table bill_payment_applications enable row level security;
 
+drop policy if exists "bills_select" on bills;
 create policy "bills_select" on bills for select using (tenant_id in (select current_tenant_ids()));
+drop policy if exists "bills_insert" on bills;
 create policy "bills_insert" on bills for insert with check (tenant_id in (select current_tenant_ids()));
+drop policy if exists "bills_update" on bills;
 create policy "bills_update" on bills for update using (tenant_id in (select current_tenant_ids())) with check (tenant_id in (select current_tenant_ids()));
+drop policy if exists "bills_delete" on bills;
 create policy "bills_delete" on bills for delete using (tenant_id in (select current_admin_tenant_ids()) and status = 'open' and balance_due = total);
 
+drop policy if exists "bill_lines_select" on bill_lines;
 create policy "bill_lines_select" on bill_lines for select using (
   bill_id in (select id from bills where tenant_id in (select current_tenant_ids()))
 );
+drop policy if exists "bill_lines_insert" on bill_lines;
 create policy "bill_lines_insert" on bill_lines for insert with check (
   bill_id in (select id from bills where tenant_id in (select current_tenant_ids()))
 );
+drop policy if exists "bill_lines_delete" on bill_lines;
 create policy "bill_lines_delete" on bill_lines for delete using (
   bill_id in (select id from bills where tenant_id in (select current_tenant_ids()))
 );
 
+drop policy if exists "payments_made_select" on payments_made;
 create policy "payments_made_select" on payments_made for select using (tenant_id in (select current_tenant_ids()));
+drop policy if exists "payments_made_insert" on payments_made;
 create policy "payments_made_insert" on payments_made for insert with check (tenant_id in (select current_tenant_ids()));
 
+drop policy if exists "bill_payment_applications_select" on bill_payment_applications;
 create policy "bill_payment_applications_select" on bill_payment_applications for select using (
   payment_id in (select id from payments_made where tenant_id in (select current_tenant_ids()))
 );
+drop policy if exists "bill_payment_applications_insert" on bill_payment_applications;
 create policy "bill_payment_applications_insert" on bill_payment_applications for insert with check (
   payment_id in (select id from payments_made where tenant_id in (select current_tenant_ids()))
 );
--- Session 5: AP posting functions. Both SECURITY DEFINER â€” same rationale as the
+
+
+
+-- ==========================================
+-- File: 20260827204449_ap_posting_functions.sql
+-- ==========================================
+-- Session 5: AP posting functions. Both SECURITY DEFINER — same rationale as the
 -- Session 4 AR posting functions (see that migration's header comment).
 --
 -- Unlike invoices (which start 'draft' and post on send), bills' own status enum
--- has no 'draft' state â€” a vendor bill is a real liability the moment it's recorded,
+-- has no 'draft' state — a vendor bill is a real liability the moment it's recorded,
 -- so create_bill_received creates the bill, its lines, and the GL entry atomically
 -- in one call rather than a separate create-then-post step.
 
@@ -1102,7 +1237,7 @@ end;
 $$;
 
 -- Shared application + GL-posting logic, used by both the immediate path above and
--- execute_scheduled_vendor_payment below. Not exposed to authenticated directly â€”
+-- execute_scheduled_vendor_payment below. Not exposed to authenticated directly —
 -- callers must go through one of those two entry points, which own the authorization
 -- and scheduling checks.
 create or replace function public._apply_vendor_payment(
@@ -1210,12 +1345,18 @@ $$;
 grant execute on function public.post_vendor_payment_made(uuid, uuid, date, numeric, text, date, jsonb) to authenticated;
 grant execute on function public.execute_scheduled_vendor_payment(uuid, jsonb) to authenticated;
 revoke execute on function public._apply_vendor_payment(uuid, uuid, numeric, jsonb) from public, anon, authenticated;
+
+
+
+-- ==========================================
+-- File: 20260827204520_ar_ap_lockdown_function_grants.sql
+-- ==========================================
 -- Same gap Session 2 hit and fixed (auth_foundation_lockdown_function_grants):
 -- CREATE FUNCTION grants EXECUTE to PUBLIC by default, so every SECURITY DEFINER
 -- function from the AR/AP posting-functions migrations was callable by the `anon`
 -- role. Each function's own auth.uid()/auth.role() check already rejects an
 -- unauthenticated caller functionally, but revoking at the grant level is the
--- established defense-in-depth pattern here â€” don't rely solely on the function
+-- established defense-in-depth pattern here — don't rely solely on the function
 -- body when the fix is one line.
 
 revoke execute on function public.post_invoice_issued(uuid) from public, anon;
@@ -1223,6 +1364,12 @@ revoke execute on function public.post_payment_received(uuid, uuid, date, numeri
 revoke execute on function public.create_bill_received(uuid, uuid, text, date, date, jsonb) from public, anon;
 revoke execute on function public.post_vendor_payment_made(uuid, uuid, date, numeric, text, date, jsonb) from public, anon;
 revoke execute on function public.execute_scheduled_vendor_payment(uuid, jsonb) from public, anon;
+
+
+
+-- ==========================================
+-- File: 20260828000001_documents_expenses_agent_actions.sql
+-- ==========================================
 -- Session 6: Documents, Expenses, and Agentic Backbone (agent_actions)
 
 -- 1. Documents Table
@@ -1243,15 +1390,19 @@ create table if not exists public.documents (
 -- RLS for Documents
 alter table public.documents enable row level security;
 
+drop policy if exists "documents_select" on public.documents;
 create policy "documents_select" on public.documents
   for select using (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "documents_insert" on public.documents;
 create policy "documents_insert" on public.documents
   for insert with check (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "documents_update" on public.documents;
 create policy "documents_update" on public.documents
   for update using (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "documents_delete" on public.documents;
 create policy "documents_delete" on public.documents
   for delete using (tenant_id in (select public.current_tenant_ids()));
 
@@ -1281,15 +1432,19 @@ alter table public.documents
 -- RLS for Expenses
 alter table public.expenses enable row level security;
 
+drop policy if exists "expenses_select" on public.expenses;
 create policy "expenses_select" on public.expenses
   for select using (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "expenses_insert" on public.expenses;
 create policy "expenses_insert" on public.expenses
   for insert with check (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "expenses_update" on public.expenses;
 create policy "expenses_update" on public.expenses
   for update using (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "expenses_delete" on public.expenses;
 create policy "expenses_delete" on public.expenses
   for delete using (tenant_id in (select public.current_tenant_ids()));
 
@@ -1316,12 +1471,15 @@ create table if not exists public.agent_actions (
 -- RLS for Agent Actions
 alter table public.agent_actions enable row level security;
 
+drop policy if exists "agent_actions_select" on public.agent_actions;
 create policy "agent_actions_select" on public.agent_actions
   for select using (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "agent_actions_insert" on public.agent_actions;
 create policy "agent_actions_insert" on public.agent_actions
   for insert with check (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "agent_actions_update" on public.agent_actions;
 create policy "agent_actions_update" on public.agent_actions
   for update using (tenant_id in (select public.current_tenant_ids()));
 
@@ -1331,15 +1489,23 @@ insert into storage.buckets (id, name, public)
 values ('receipts', 'receipts', false)
 on conflict (id) do nothing;
 
+drop policy if exists "Authenticated users can upload receipts" on storage.objects;
 create policy "Authenticated users can upload receipts"
   on storage.objects for insert
   to authenticated
   with check (bucket_id = 'receipts');
 
+drop policy if exists "Authenticated users can view receipts" on storage.objects;
 create policy "Authenticated users can view receipts"
   on storage.objects for select
   to authenticated
   using (bucket_id = 'receipts');
+
+
+
+-- ==========================================
+-- File: 20260828000002_expense_posting_functions.sql
+-- ==========================================
 -- Session 6: Expense Posting RPC Functions & Security Lockdown
 
 -- Creates and posts a non-bill expense directly into the double-entry GL
@@ -1415,6 +1581,12 @@ $$;
 -- Grant execution to authenticated users, revoke from public and anon
 grant execute on function public.post_expense_created(uuid, uuid, date, numeric, uuid, text, text, uuid) to authenticated;
 revoke execute on function public.post_expense_created(uuid, uuid, date, numeric, uuid, text, text, uuid) from public, anon;
+
+
+
+-- ==========================================
+-- File: 20260828000003_banking_and_reconciliation.sql
+-- ==========================================
 -- Session 7: Banking & Rule-Based Reconciliation Schema
 
 -- 1. Bank Accounts Table
@@ -1434,15 +1606,19 @@ create table if not exists public.bank_accounts (
 -- RLS for bank_accounts
 alter table public.bank_accounts enable row level security;
 
+drop policy if exists "bank_accounts_select" on public.bank_accounts;
 create policy "bank_accounts_select" on public.bank_accounts
   for select using (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "bank_accounts_insert" on public.bank_accounts;
 create policy "bank_accounts_insert" on public.bank_accounts
   for insert with check (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "bank_accounts_update" on public.bank_accounts;
 create policy "bank_accounts_update" on public.bank_accounts
   for update using (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "bank_accounts_delete" on public.bank_accounts;
 create policy "bank_accounts_delete" on public.bank_accounts
   for delete using (tenant_id in (select public.current_tenant_ids()));
 
@@ -1463,12 +1639,15 @@ create table if not exists public.bank_transactions (
 -- RLS for bank_transactions
 alter table public.bank_transactions enable row level security;
 
+drop policy if exists "bank_transactions_select" on public.bank_transactions;
 create policy "bank_transactions_select" on public.bank_transactions
   for select using (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "bank_transactions_insert" on public.bank_transactions;
 create policy "bank_transactions_insert" on public.bank_transactions
   for insert with check (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "bank_transactions_update" on public.bank_transactions;
 create policy "bank_transactions_update" on public.bank_transactions
   for update using (tenant_id in (select public.current_tenant_ids()));
 
@@ -1492,17 +1671,27 @@ create table if not exists public.reconciliation_matches (
 -- RLS for reconciliation_matches
 alter table public.reconciliation_matches enable row level security;
 
+drop policy if exists "reconciliation_matches_select" on public.reconciliation_matches;
 create policy "reconciliation_matches_select" on public.reconciliation_matches
   for select using (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "reconciliation_matches_insert" on public.reconciliation_matches;
 create policy "reconciliation_matches_insert" on public.reconciliation_matches
   for insert with check (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "reconciliation_matches_update" on public.reconciliation_matches;
 create policy "reconciliation_matches_update" on public.reconciliation_matches
   for update using (tenant_id in (select public.current_tenant_ids()));
 
+drop policy if exists "reconciliation_matches_delete" on public.reconciliation_matches;
 create policy "reconciliation_matches_delete" on public.reconciliation_matches
   for delete using (tenant_id in (select public.current_tenant_ids()));
+
+
+
+-- ==========================================
+-- File: 20260828000004_reports_and_unified_ledger_feed.sql
+-- ==========================================
 -- Session 8: Unified Transactions Feed & Reporting Helpers
 
 -- Create or replace unified view for all transactions (invoices, bills, expenses, payments)
@@ -1582,6 +1771,12 @@ left join public.contacts c on c.id = pm.vendor_id;
 
 -- Grant select to authenticated users on view
 grant select on public.unified_transactions_feed to authenticated;
+
+
+
+-- ==========================================
+-- File: 20260828000005_reconciliation_agent_and_vector_embeddings.sql
+-- ==========================================
 -- Session 9: Reconciliation Agent (Agentic Layer v1) & Vector Embeddings
 
 -- Enable vector extension for semantic matching
@@ -1605,6 +1800,7 @@ on public.transaction_embeddings using hnsw (embedding vector_cosine_ops);
 -- RLS policies for transaction_embeddings
 alter table public.transaction_embeddings enable row level security;
 
+drop policy if exists "Tenant members can view transaction embeddings" on public.transaction_embeddings;
 create policy "Tenant members can view transaction embeddings"
 on public.transaction_embeddings for select
 using (
@@ -1613,6 +1809,7 @@ using (
   )
 );
 
+drop policy if exists "Tenant members can insert transaction embeddings" on public.transaction_embeddings;
 create policy "Tenant members can insert transaction embeddings"
 on public.transaction_embeddings for insert
 with check (
@@ -1623,6 +1820,12 @@ with check (
 
 -- Add settings column to tenants table if missing
 alter table public.tenants add column if not exists settings jsonb default '{"auto_match_threshold": 0.95}'::jsonb;
+
+
+
+-- ==========================================
+-- File: 20260828000006_ap_bookkeeping_agent_and_vendor_rules.sql
+-- ==========================================
 -- Session 10: AP Bookkeeping Agent (Agentic Layer v2) & Vendor Learning Rules
 
 -- Vendor memory / rules table for categorizing receipts & bills
@@ -1641,6 +1844,7 @@ create table if not exists public.vendor_rules (
 -- Enable RLS for vendor_rules
 alter table public.vendor_rules enable row level security;
 
+drop policy if exists "Tenant members can view vendor rules" on public.vendor_rules;
 create policy "Tenant members can view vendor rules"
 on public.vendor_rules for select
 using (
@@ -1649,6 +1853,7 @@ using (
   )
 );
 
+drop policy if exists "Tenant members can insert/update vendor rules" on public.vendor_rules;
 create policy "Tenant members can insert/update vendor rules"
 on public.vendor_rules for all
 using (
@@ -1660,6 +1865,12 @@ using (
 -- Add duplicate_detected and line_items columns to documents table
 alter table public.documents add column if not exists duplicate_detected boolean default false;
 alter table public.documents add column if not exists line_items jsonb default '[]'::jsonb;
+
+
+
+-- ==========================================
+-- File: 20260828000007_ar_collections_agent_and_dunning.sql
+-- ==========================================
 -- Session 11: AR Collections Agent (Agentic Layer v3) & Dunning Schedules
 
 -- Dunning schedule tracking table for automated AR collection workflows
@@ -1680,6 +1891,7 @@ create table if not exists public.dunning_schedules (
 -- Enable RLS for dunning_schedules
 alter table public.dunning_schedules enable row level security;
 
+drop policy if exists "Tenant members can view dunning schedules" on public.dunning_schedules;
 create policy "Tenant members can view dunning schedules"
 on public.dunning_schedules for select
 using (
@@ -1688,6 +1900,7 @@ using (
   )
 );
 
+drop policy if exists "Tenant members can manage dunning schedules" on public.dunning_schedules;
 create policy "Tenant members can manage dunning schedules"
 on public.dunning_schedules for all
 using (
@@ -1699,6 +1912,12 @@ using (
 -- Add customer risk metrics to contacts table
 alter table public.contacts add column if not exists risk_score numeric(5,2) default 0.00;
 alter table public.contacts add column if not exists avg_days_to_pay integer default 0;
+
+
+
+-- ==========================================
+-- File: 20260828000008_agent_control_plane_and_hardening.sql
+-- ==========================================
 -- Session 12: Agent Control Plane & Production Hardening
 
 -- RPC function to update per-agent autonomy level in tenants.settings
@@ -1780,3 +1999,5 @@ revoke execute on function public.set_agent_autonomy_level from public, anon;
 revoke execute on function public.emergency_kill_switch from public, anon;
 grant execute on function public.set_agent_autonomy_level to authenticated;
 grant execute on function public.emergency_kill_switch to authenticated;
+
+
