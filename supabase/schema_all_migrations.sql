@@ -1425,9 +1425,14 @@ create table if not exists public.expenses (
 );
 
 -- Add foreign key back to documents.linked_expense_id
-alter table public.documents
+do $$
+begin
+  alter table public.documents
   add constraint documents_linked_expense_id_fkey
   foreign key (linked_expense_id) references public.expenses(id) on delete set null;
+exception when duplicate_object then null;
+when duplicate_table then null;
+end $$;;
 
 -- RLS for Expenses
 alter table public.expenses enable row level security;
