@@ -6,3 +6,4 @@ export * from "./post-invoice-issued";
 export * from "./post-payment-received";
 export * from "./post-bill-received";
 export * from "./post-vendor-payment-made";
+export * from "./post-expense";

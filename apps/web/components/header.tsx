@@ -4,6 +4,7 @@ import Link from "next/link";
 import { signOut } from "@/lib/actions/auth";
 import { TenantSwitcher } from "@/components/tenant-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { CPAModeToggle } from "@/components/cpa-mode-toggle";
 import { useTenant } from "@/lib/tenant/context";
 
 export function Header({ fullName }: { fullName: string | null }) {
@@ -32,6 +33,7 @@ export function Header({ fullName }: { fullName: string | null }) {
         </div>
 
         <nav className="flex items-center gap-2 text-sm">
+          <CPAModeToggle />
           <ThemeToggle />
           <Link
             href="/settings/team"

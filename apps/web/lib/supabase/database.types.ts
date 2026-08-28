@@ -223,6 +223,8 @@ export type Database = {
           tax_id: string | null
           tenant_id: string
           type: string
+          risk_score: number | null
+          avg_days_to_pay: number | null
         }
         Insert: {
           billing_address?: Json | null
@@ -238,6 +240,8 @@ export type Database = {
           tax_id?: string | null
           tenant_id: string
           type: string
+          risk_score?: number | null
+          avg_days_to_pay?: number | null
         }
         Update: {
           billing_address?: Json | null
@@ -253,6 +257,8 @@ export type Database = {
           tax_id?: string | null
           tenant_id?: string
           type?: string
+          risk_score?: number | null
+          avg_days_to_pay?: number | null
         }
         Relationships: [
           {
@@ -846,11 +852,423 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_actions: {
+        Row: {
+          id: string
+          tenant_id: string
+          agent_name: string
+          module: string
+          trigger_event: string
+          input_context: Json
+          proposed_action: Json
+          confidence_score: number | null
+          autonomy_level: number
+          status: string
+          executed_at: string | null
+          reviewed_by: string | null
+          reviewed_at: string | null
+          reversal_of_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          agent_name: string
+          module: string
+          trigger_event: string
+          input_context?: Json
+          proposed_action?: Json
+          confidence_score?: number | null
+          autonomy_level: number
+          status?: string
+          executed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          reversal_of_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          agent_name?: string
+          module?: string
+          trigger_event?: string
+          input_context?: Json
+          proposed_action?: Json
+          confidence_score?: number | null
+          autonomy_level?: number
+          status?: string
+          executed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          reversal_of_id?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      documents: {
+        Row: {
+          id: string
+          tenant_id: string
+          uploaded_by: string | null
+          storage_path: string
+          doc_type: string
+          status: string
+          ocr_confidence: number | null
+          duplicate_detected: boolean | null
+          line_items: Json | null
+          extracted_data: Json | null
+          linked_bill_id: string | null
+          linked_expense_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          uploaded_by?: string | null
+          storage_path: string
+          doc_type?: string
+          status?: string
+          ocr_confidence?: number | null
+          duplicate_detected?: boolean | null
+          line_items?: Json | null
+          extracted_data?: Json | null
+          linked_bill_id?: string | null
+          linked_expense_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          uploaded_by?: string | null
+          storage_path?: string
+          doc_type?: string
+          status?: string
+          ocr_confidence?: number | null
+          duplicate_detected?: boolean | null
+          line_items?: Json | null
+          extracted_data?: Json | null
+          linked_bill_id?: string | null
+          linked_expense_id?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      vendor_rules: {
+        Row: {
+          id: string
+          tenant_id: string
+          vendor_name: string
+          default_account_id: string | null
+          default_tax_rate: number
+          learned_from_action_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          vendor_name: string
+          default_account_id?: string | null
+          default_tax_rate?: number
+          learned_from_action_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          vendor_name?: string
+          default_account_id?: string | null
+          default_tax_rate?: number
+          learned_from_action_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      dunning_schedules: {
+        Row: {
+          id: string
+          tenant_id: string
+          invoice_id: string
+          customer_id: string
+          step: string
+          scheduled_for: string
+          status: string
+          sent_at: string | null
+          template_used: string | null
+          stripe_payment_url: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          invoice_id: string
+          customer_id: string
+          step: string
+          scheduled_for: string
+          status?: string
+          sent_at?: string | null
+          template_used?: string | null
+          stripe_payment_url?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          invoice_id?: string
+          customer_id?: string
+          step?: string
+          scheduled_for?: string
+          status?: string
+          sent_at?: string | null
+          template_used?: string | null
+          stripe_payment_url?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          id: string
+          tenant_id: string
+          contact_id: string | null
+          expense_date: string
+          amount: number
+          account_id: string
+          project_id: string | null
+          receipt_document_id: string | null
+          status: string
+          payment_method: string
+          memo: string | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          contact_id?: string | null
+          expense_date: string
+          amount: number
+          account_id: string
+          project_id?: string | null
+          receipt_document_id?: string | null
+          status?: string
+          payment_method?: string
+          memo?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          contact_id?: string | null
+          expense_date?: string
+          amount?: number
+          account_id?: string
+          project_id?: string | null
+          receipt_document_id?: string | null
+          status?: string
+          payment_method?: string
+          memo?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      bank_accounts: {
+        Row: {
+          id: string
+          tenant_id: string
+          name: string
+          institution_name: string | null
+          account_type: string | null
+          current_balance: number | null
+          plaid_item_id: string | null
+          plaid_account_id: string | null
+          last_synced_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          name: string
+          institution_name?: string | null
+          account_type?: string | null
+          current_balance?: number | null
+          plaid_item_id?: string | null
+          plaid_account_id?: string | null
+          last_synced_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          name?: string
+          institution_name?: string | null
+          account_type?: string | null
+          current_balance?: number | null
+          plaid_item_id?: string | null
+          plaid_account_id?: string | null
+          last_synced_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      bank_transactions: {
+        Row: {
+          id: string
+          tenant_id: string
+          bank_account_id: string
+          plaid_transaction_id: string | null
+          posted_date: string
+          amount: number
+          description: string
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          bank_account_id: string
+          plaid_transaction_id?: string | null
+          posted_date: string
+          amount: number
+          description: string
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          bank_account_id?: string
+          plaid_transaction_id?: string | null
+          posted_date?: string
+          amount?: number
+          description?: string
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      reconciliation_matches: {
+        Row: {
+          id: string
+          tenant_id: string
+          bank_transaction_id: string
+          matched_type: string
+          matched_id: string | null
+          confidence_score: number | null
+          match_signals: Json | null
+          status: string
+          created_by_agent: boolean
+          reviewed_by: string | null
+          reviewed_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          bank_transaction_id: string
+          matched_type: string
+          matched_id?: string | null
+          confidence_score?: number | null
+          match_signals?: Json | null
+          status?: string
+          created_by_agent?: boolean
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          bank_transaction_id?: string
+          matched_type?: string
+          matched_id?: string | null
+          confidence_score?: number | null
+          match_signals?: Json | null
+          status?: string
+          created_by_agent?: boolean
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      transaction_embeddings: {
+        Row: {
+          id: string
+          tenant_id: string
+          source_type: string
+          source_id: string
+          content: string
+          embedding: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          source_type: string
+          source_id: string
+          content: string
+          embedding?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          source_type?: string
+          source_id?: string
+          content?: string
+          embedding?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      unified_transactions_feed: {
+        Row: {
+          transaction_type: string
+          id: string
+          tenant_id: string
+          party_name: string | null
+          amount: number
+          transaction_date: string
+          status: string
+          description: string
+          created_at: string
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      set_agent_autonomy_level: {
+        Args: {
+          p_agent_name: string
+          p_level: number
+        }
+        Returns: Json
+      }
+      emergency_kill_switch: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      post_expense_created: {
+        Args: {
+          p_account_id: string
+          p_amount: number
+          p_contact_id: string | null
+          p_document_id: string | null
+          p_expense_date: string
+          p_memo: string | null
+          p_payment_method: string | null
+          p_tenant_id: string
+        }
+        Returns: string
+      }
       _apply_vendor_payment: {
         Args: {
           p_amount: number

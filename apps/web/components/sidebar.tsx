@@ -109,7 +109,8 @@ const primaryNav: NavItem[] = [
   { label: "Reports", href: "/reports", icon: icons.reports },
   { label: "Forecasting", href: "/forecasting", icon: icons.forecasting },
   { label: "Documents", href: "/documents", icon: icons.documents },
-  { label: "Reconciliation", href: "/reconciliation", icon: icons.reconciliation, badge: "12" },
+  { label: "Reconciliation", href: "/reconciliation", icon: icons.reconciliation },
+  { label: "Agent Control Plane", href: "/agents", icon: icons.reconciliation, badge: "AI" },
   { label: "Contacts", href: "/contacts", icon: icons.contacts },
 ];
 
