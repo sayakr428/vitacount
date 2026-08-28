@@ -2006,4 +2006,8 @@ revoke execute on function public.emergency_kill_switch from public, anon;
 grant execute on function public.set_agent_autonomy_level to authenticated;
 grant execute on function public.emergency_kill_switch to authenticated;
 
+-- Force PostgREST API engine to reload schema cache immediately
+notify pgrst, 'reload schema';
+
+
 
