@@ -37,5 +37,10 @@ with check (
   )
 );
 
--- Add settings column to tenants table if missing
+-- tenants.settings already exists (Session 2), so the column-level default above
+-- would be a no-op for every tenant created before this migration — backfill the
+-- key explicitly instead, without clobbering any other settings already present.
 alter table public.tenants add column if not exists settings jsonb default '{"auto_match_threshold": 0.95}'::jsonb;
+update public.tenants
+set settings = settings || '{"auto_match_threshold": 0.95}'::jsonb
+where not (settings ? 'auto_match_threshold');

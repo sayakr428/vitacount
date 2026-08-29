@@ -160,41 +160,28 @@ export async function runAPBookkeepingAgent(tenantId: string, documentId: string
     .eq("id", documentId);
 
   // 6. Execute L2 Autonomy Posting if auto_posted
+  //
+  // post_expense_created (the SECURITY DEFINER RPC) is the *only* place that
+  // should insert into expenses/journal_entries — it already creates the
+  // expense row, posts the balanced GL entry, and links documents.linked_expense_id
+  // internally. This previously ALSO did a direct .from("expenses").insert(...)
+  // before calling the RPC, which has its own internal insert — every
+  // auto-posted receipt was creating two expense rows and two journal entries
+  // for the same real-world expense, double-counting it in the ledger. Fixed
+  // to call the RPC once and use its return value as the single source of truth.
   if (autonomyStatus === "auto_posted" && matchedAccountId) {
-    const { data: postedExpense } = await supabase
-      .from("expenses")
-      .insert({
-        tenant_id: tenantId,
-        amount: totalAmount,
-        expense_date: invoiceDate,
-        account_id: matchedAccountId,
-        receipt_document_id: documentId,
-        status: "posted",
-        payment_method: "card",
-        memo: `${vendorName} (Auto-posted by AP Agent)`,
-      })
-      .select("id")
-      .single();
+    const { data: postedExpenseId, error: postError } = await supabase.rpc("post_expense_created", {
+      p_tenant_id: tenantId,
+      p_expense_date: invoiceDate,
+      p_account_id: matchedAccountId,
+      p_amount: totalAmount,
+      p_contact_id: null,
+      p_payment_method: "card",
+      p_document_id: documentId,
+      p_memo: `${vendorName} (Auto-posted by AP Agent)`,
+    });
 
-    if (postedExpense) {
-      // Trigger GL posting engine RPC
-      await supabase.rpc("post_expense_created", {
-        p_tenant_id: tenantId,
-        p_expense_date: invoiceDate,
-        p_account_id: matchedAccountId,
-        p_amount: totalAmount,
-        p_contact_id: null,
-        p_payment_method: "card",
-        p_document_id: documentId,
-        p_memo: `${vendorName} (Auto-posted by AP Agent)`,
-      });
-
-      // Update document link
-      await supabase
-        .from("documents")
-        .update({ linked_expense_id: postedExpense.id })
-        .eq("id", documentId);
-
+    if (postedExpenseId && !postError) {
       // Log agent action
       await supabase.from("agent_actions").insert({
         tenant_id: tenantId,
@@ -203,7 +190,7 @@ export async function runAPBookkeepingAgent(tenantId: string, documentId: string
         trigger_event: "document_upload_ocr",
         input_context: { document_id: documentId, vendor_name: vendorName },
         proposed_action: {
-          expense_id: postedExpense.id,
+          expense_id: postedExpenseId,
           amount: totalAmount,
           account_id: matchedAccountId,
         },

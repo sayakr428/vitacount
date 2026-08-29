@@ -1,0 +1,12 @@
+-- The view as created inherits Postgres's pre-15 default view behavior: it runs
+-- with the view owner's (elevated) privileges rather than the querying user's,
+-- which means the RLS policies on invoices/bills/expenses/payments_received/
+-- payments_made/contacts are silently NOT enforced when queried through this
+-- view — any authenticated user could see every tenant's transactions, not just
+-- their own. security_invoker=true makes the view run as the querying user, so
+-- the underlying tables' RLS applies exactly as if queried directly. Caught via
+-- get_advisors (ERROR-level "Security Definer View") immediately after first
+-- applying reports_and_unified_ledger_feed — never exposed via the app UI
+-- (dashboard-queries.ts hadn't shipped a route reading this view yet), but
+-- fixing before anything reads from it.
+alter view public.unified_transactions_feed set (security_invoker = true);

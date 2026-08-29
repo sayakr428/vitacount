@@ -1728,7 +1728,7 @@ select
   'Bill #' || b.bill_number as description,
   b.created_at as created_at
 from public.bills b
-left join public.contacts c on c.id = b.contact_id
+left join public.contacts c on c.id = b.vendor_id
 
 union all
 
@@ -1773,7 +1773,7 @@ select
   'Vendor Payment Made (' || pm.method || ')' as description,
   pm.created_at as created_at
 from public.payments_made pm
-left join public.contacts c on c.id = pm.contact_id;
+left join public.contacts c on c.id = pm.vendor_id;
 
 -- Grant select to authenticated users on view
 grant select on public.unified_transactions_feed to authenticated;
@@ -1824,8 +1824,12 @@ with check (
   )
 );
 
--- Add settings column to tenants table if missing
+-- Add settings column to tenants table if missing (tenants.settings already exists
+-- from Session 2 in practice, so also backfill the key for existing tenants)
 alter table public.tenants add column if not exists settings jsonb default '{"auto_match_threshold": 0.95}'::jsonb;
+update public.tenants
+set settings = settings || '{"auto_match_threshold": 0.95}'::jsonb
+where not (settings ? 'auto_match_threshold');
 
 
 
