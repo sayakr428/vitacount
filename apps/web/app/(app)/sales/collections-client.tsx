@@ -62,21 +62,21 @@ export function CollectionsClient({ schedules: initialSchedules, riskMetrics }: 
           <div className="mt-1 text-[11px] text-muted-foreground">&gt;15 days average payment delay</div>
         </div>
 
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-          <div className="flex items-center justify-between text-xs text-amber-500">
+        <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">
+          <div className="flex items-center justify-between text-xs text-warning">
             <span className="font-semibold">Medium Risk Customers</span>
             <AlertTriangle className="h-4 w-4" />
           </div>
-          <div className="mt-2 font-mono text-2xl font-bold text-amber-500">{medRiskCount}</div>
+          <div className="mt-2 font-mono text-2xl font-bold text-warning">{medRiskCount}</div>
           <div className="mt-1 text-[11px] text-muted-foreground">5 - 15 days average payment delay</div>
         </div>
 
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-          <div className="flex items-center justify-between text-xs text-emerald-500">
+        <div className="rounded-xl border border-positive/30 bg-positive/10 p-4">
+          <div className="flex items-center justify-between text-xs text-positive">
             <span className="font-semibold">Low Risk Customers</span>
             <CheckCircle2 className="h-4 w-4" />
           </div>
-          <div className="mt-2 font-mono text-2xl font-bold text-emerald-500">{lowRiskCount}</div>
+          <div className="mt-2 font-mono text-2xl font-bold text-positive">{lowRiskCount}</div>
           <div className="mt-1 text-[11px] text-muted-foreground">&lt;5 days payment delay</div>
         </div>
       </div>
@@ -122,8 +122,8 @@ export function CollectionsClient({ schedules: initialSchedules, riskMetrics }: 
                           custRisk.riskTier === "High Risk"
                             ? "bg-destructive/10 text-destructive"
                             : custRisk.riskTier === "Medium Risk"
-                            ? "bg-amber-500/10 text-amber-500"
-                            : "bg-emerald-500/10 text-emerald-500"
+                            ? "bg-warning/10 text-warning"
+                            : "bg-positive/10 text-positive"
                         }`}
                       >
                         {custRisk.riskTier} ({custRisk.avgDaysToPay}d delay)

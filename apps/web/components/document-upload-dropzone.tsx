@@ -60,7 +60,7 @@ export function DocumentUploadDropzone() {
         </label>
 
         {successMsg && (
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-500">
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-positive">
             <CheckCircle2 className="h-4 w-4" />
             <span>{successMsg}</span>
           </div>

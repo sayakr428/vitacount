@@ -70,7 +70,7 @@ export function DocumentReviewModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border bg-muted/30 px-6 py-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-positive/10 text-positive">
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
@@ -88,7 +88,7 @@ export function DocumentReviewModal({
 
         {/* Duplicate Warning Banner */}
         {isDuplicate && (
-          <div className="flex items-center gap-2 bg-amber-500/15 px-6 py-2.5 text-xs text-amber-500 border-b border-amber-500/30">
+          <div className="flex items-center gap-2 bg-warning/15 px-6 py-2.5 text-xs text-warning border-b border-warning/30">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             <span>
               <strong>Duplicate Receipt Detected:</strong> An existing transaction with identical vendor and exact amount was found within $\pm 3$ days. Review carefully before posting.
@@ -104,11 +104,11 @@ export function DocumentReviewModal({
               <span className="text-xs font-medium text-muted-foreground">AI Confidence & Signals</span>
               <div className="flex items-center gap-2">
                 {isLearnedRule && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-blue-500">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-chart-2/10 px-2.5 py-0.5 text-[10px] font-semibold text-chart-2">
                     <BookOpen className="h-3 w-3" /> Vendor Rule Learned
                   </span>
                 )}
-                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-500">
+                <span className="inline-flex items-center rounded-full bg-positive/10 px-2.5 py-0.5 text-xs font-semibold text-positive">
                   {confidencePct}% Confidence
                 </span>
               </div>
@@ -187,7 +187,7 @@ export function DocumentReviewModal({
               <div className="mb-1 flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground">Expense Category Account</label>
                 {isLearnedRule && (
-                  <span className="text-[10px] text-blue-400">Auto-filled from learned vendor rule</span>
+                  <span className="text-[10px] text-chart-2">Auto-filled from learned vendor rule</span>
                 )}
               </div>
               <select
@@ -249,7 +249,7 @@ export function DocumentReviewModal({
             type="button"
             onClick={handlePostExpense}
             disabled={isSubmitting}
-            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition-transform active:scale-95 hover:bg-emerald-500 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-positive px-4 py-2 text-xs font-semibold text-white shadow-xs transition-transform active:scale-95 hover:bg-positive disabled:opacity-50"
           >
             {isSubmitting ? (
               <Loader2 className="h-4 w-4 animate-spin" />

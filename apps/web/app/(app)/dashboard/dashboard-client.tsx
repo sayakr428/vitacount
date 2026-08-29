@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowUpRight, ArrowDownLeft, Building2, AlertCircle, Sparkles, CheckCircle2, Lock, ArrowRight } from "lucide-react";
+import { BezelCard } from "@/components/bezel-card";
 
 interface DashboardClientProps {
   firstName: string;
@@ -27,16 +28,6 @@ interface DashboardClientProps {
     items: any[];
   };
   recentTransactions: any[];
-}
-
-function BezelCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`rounded-2xl bg-foreground/[0.03] p-1.5 ring-1 ring-foreground/[0.06] ${className}`}>
-      <div className="h-full rounded-xl bg-card p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-        {children}
-      </div>
-    </div>
-  );
 }
 
 const currency = (n: number) =>
@@ -116,7 +107,7 @@ export function DashboardClient({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <BezelCard>
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total Income</span>
-          <p className="mt-3 font-mono text-2xl font-bold tabular-nums text-emerald-500">{currency(kpis.totalIncome)}</p>
+          <p className="mt-3 font-mono text-2xl font-bold tabular-nums text-positive">{currency(kpis.totalIncome)}</p>
           <p className="mt-1 text-[11px] text-muted-foreground">Live revenue debits/credits</p>
         </BezelCard>
 
@@ -128,7 +119,7 @@ export function DashboardClient({
 
         <BezelCard>
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Net Profit</span>
-          <p className={`mt-3 font-mono text-2xl font-bold tabular-nums ${kpis.netProfit >= 0 ? "text-emerald-500" : "text-destructive"}`}>
+          <p className={`mt-3 font-mono text-2xl font-bold tabular-nums ${kpis.netProfit >= 0 ? "text-positive" : "text-destructive"}`}>
             {currency(kpis.netProfit)}
           </p>
           <p className="mt-1 text-[11px] text-muted-foreground">Income minus Expenses</p>
@@ -155,11 +146,11 @@ export function DashboardClient({
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl border border-border bg-muted/20 p-3">
               <div className="text-[11px] text-muted-foreground">Needs Review</div>
-              <div className="mt-1 font-mono text-lg font-bold text-amber-500">{reconciliationSummary.needsReview}</div>
+              <div className="mt-1 font-mono text-lg font-bold text-warning">{reconciliationSummary.needsReview}</div>
             </div>
             <div className="rounded-xl border border-border bg-muted/20 p-3">
               <div className="text-[11px] text-muted-foreground">Approved</div>
-              <div className="mt-1 font-mono text-lg font-bold text-emerald-500">{reconciliationSummary.autoMatched}</div>
+              <div className="mt-1 font-mono text-lg font-bold text-positive">{reconciliationSummary.autoMatched}</div>
             </div>
             <div className="rounded-xl border border-border bg-muted/20 p-3">
               <div className="text-[11px] text-muted-foreground">Exceptions</div>
@@ -177,11 +168,11 @@ export function DashboardClient({
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-sm font-semibold text-foreground">Cash Flow Forecast</h2>
             <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-              <span className="flex items-center gap-1"><span className="h-px w-3 bg-emerald-500" /> Actual</span>
+              <span className="flex items-center gap-1"><span className="h-px w-3 bg-positive" /> Actual</span>
               <span className="flex items-center gap-1"><span className="h-px w-3 border-t border-dashed border-muted-foreground" /> Projection</span>
             </div>
           </div>
-          <div className="mt-4 flex h-28 items-center justify-center rounded-xl border border-border/50 bg-black/20 p-4">
+          <div className="mt-4 flex h-28 items-center justify-center rounded-xl border border-border/50 bg-muted/30 p-4">
             <svg viewBox="0 0 300 60" className="h-full w-full">
               <path d="M0 45 L50 35 L100 40 L150 25" fill="none" stroke="var(--positive)" strokeWidth="2.5" />
               <path d="M150 25 L200 20 L250 28 L300 15" fill="none" stroke="var(--muted-foreground)" strokeWidth="2" strokeDasharray="4 4" />
@@ -263,7 +254,7 @@ export function DashboardClient({
               return (
                 <div key={`${tx.transaction_type}_${tx.id}`} className="flex items-center justify-between py-3">
                   <div className="flex items-center gap-3">
-                    <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${isCredit ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
+                    <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${isCredit ? "bg-positive/10 text-positive" : "bg-muted text-muted-foreground"}`}>
                       {isCredit ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
                     </div>
                     <div>
@@ -272,7 +263,7 @@ export function DashboardClient({
                     </div>
                   </div>
 
-                  <span className={`font-mono font-semibold ${isCredit ? "text-emerald-500" : "text-foreground"}`}>
+                  <span className={`font-mono font-semibold ${isCredit ? "text-positive" : "text-foreground"}`}>
                     {isCredit ? "+" : ""}${Math.abs(Number(tx.amount || 0)).toFixed(2)}
                   </span>
                 </div>

@@ -92,10 +92,10 @@ export function AgentsClient({ initialLogs, tenantSettings }: AgentsClientProps)
         <div className="rounded-xl border border-border bg-card p-5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-emerald-500" />
+              <Sparkles className="h-4 w-4 text-positive" />
               <span className="font-semibold text-sm text-foreground">AP Bookkeeping Agent</span>
             </div>
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
+            <span className="rounded-full bg-positive/10 px-2 py-0.5 text-[10px] font-bold text-positive">
               L{policyState.ap_bookkeeping_agent} Active
             </span>
           </div>
@@ -164,10 +164,10 @@ export function AgentsClient({ initialLogs, tenantSettings }: AgentsClientProps)
         <div className="rounded-xl border border-border bg-card p-5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-amber-500" />
+              <Sparkles className="h-4 w-4 text-warning" />
               <span className="font-semibold text-sm text-foreground">AR Collections Agent</span>
             </div>
-            <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-500">
+            <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-bold text-warning">
               L{policyState.ar_collections_agent} Active
             </span>
           </div>
@@ -254,9 +254,9 @@ export function AgentsClient({ initialLogs, tenantSettings }: AgentsClientProps)
                   <span
                     className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold capitalize ${
                       action.status === "auto_executed" || action.status === "approved"
-                        ? "bg-emerald-500/10 text-emerald-500"
+                        ? "bg-positive/10 text-positive"
                         : action.status === "reversed"
-                        ? "bg-amber-500/10 text-amber-500"
+                        ? "bg-warning/10 text-warning"
                         : "bg-muted text-muted-foreground"
                     }`}
                   >
@@ -287,7 +287,7 @@ export function AgentsClient({ initialLogs, tenantSettings }: AgentsClientProps)
                 Close
               </button>
             </div>
-            <pre className="max-h-96 overflow-y-auto rounded-xl border border-border bg-black/40 p-4 font-mono text-xs text-emerald-400">
+            <pre className="max-h-96 overflow-y-auto rounded-xl border border-border bg-black/40 p-4 font-mono text-xs text-positive">
               {JSON.stringify(selectedPayload, null, 2)}
             </pre>
           </div>

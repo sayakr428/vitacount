@@ -22,7 +22,7 @@ export function CPAModeToggle() {
       onClick={handleToggle}
       className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
         isCPAMode
-          ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+          ? "bg-warning/15 text-warning border border-warning/30"
           : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
       }`}
       title={isCPAMode ? "Switch to Owner Mode (Visual KPIs)" : "Switch to CPA Mode (Raw Ledger & Debits/Credits)"}

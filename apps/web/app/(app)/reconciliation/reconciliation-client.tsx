@@ -5,6 +5,7 @@ import { Check, X, Sparkles, RefreshCw, AlertCircle, CheckCircle2, RotateCcw, In
 import { approveReconciliationMatchAction, rejectReconciliationMatchAction, syncBankTransactionsAction } from "@/lib/actions/banking";
 import { triggerReconciliationAgentAction, reverseAutoMatchAction } from "@/lib/actions/reconciliation-agent-actions";
 import { useTenant } from "@/lib/tenant/context";
+import { BezelCard } from "@/components/bezel-card";
 
 interface ReconciliationClientProps {
   matches: any[];
@@ -75,48 +76,48 @@ export function ReconciliationClient({ matches, unmatchedTx }: ReconciliationCli
   });
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-[1400px] space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Reconciliation Center (AI Agentic Layer v1)</h1>
-          <p className="text-xs text-muted-foreground">
-            Multi-signal AI scoring agent. Autonomously posts matches ≥95% confidence with 1-click reversing entries.
+          <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground">Reconciliation Center</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Multi-signal matching. Autonomously posts matches ≥95% confidence with 1-click reversing entries.
           </p>
         </div>
 
         <button
           onClick={handleRunAIAgent}
           disabled={isSyncing}
-          className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-xs transition-transform active:scale-95 hover:bg-primary/90 disabled:opacity-50"
+          className="flex cursor-pointer items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
         >
           <Sparkles className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-          <span>{isSyncing ? "Evaluating Signals..." : "Run AI Reconciliation Agent"}</span>
+          <span>{isSyncing ? "Evaluating signals…" : "Run reconciliation agent"}</span>
         </button>
       </div>
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="text-xs text-muted-foreground">Needs Review (70% - 94%)</div>
-          <div className="mt-1 text-2xl font-bold text-amber-500">{needsReviewMatches.length}</div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="text-xs text-muted-foreground">Auto-Matched / Approved (≥95%)</div>
-          <div className="mt-1 text-2xl font-bold text-emerald-500">{autoMatchedEntries.length}</div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="text-xs text-muted-foreground">Exceptions (&lt;70%)</div>
-          <div className="mt-1 text-2xl font-bold text-destructive">{exceptionMatches.length}</div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="text-xs text-muted-foreground">Unmatched Bank Lines</div>
-          <div className="mt-1 text-2xl font-bold text-foreground">{unmatchedTx.length}</div>
-        </div>
+        <BezelCard>
+          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Needs review (70–94%)</div>
+          <div className="mt-3 font-heading text-2xl font-semibold tabular-nums text-warning">{needsReviewMatches.length}</div>
+        </BezelCard>
+        <BezelCard>
+          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Auto-matched (≥95%)</div>
+          <div className="mt-3 font-heading text-2xl font-semibold tabular-nums text-positive">{autoMatchedEntries.length}</div>
+        </BezelCard>
+        <BezelCard>
+          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Exceptions (&lt;70%)</div>
+          <div className="mt-3 font-heading text-2xl font-semibold tabular-nums text-destructive">{exceptionMatches.length}</div>
+        </BezelCard>
+        <BezelCard>
+          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Unmatched bank lines</div>
+          <div className="mt-3 font-heading text-2xl font-semibold tabular-nums text-foreground">{unmatchedTx.length}</div>
+        </BezelCard>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-border pb-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-full border border-border bg-card p-1.5 w-fit">
         {[
           { id: "needs_review", label: `Needs Review (${needsReviewMatches.length})` },
           { id: "auto_matched", label: `Auto-Matched (${autoMatchedEntries.length})` },
@@ -125,10 +126,10 @@ export function ReconciliationClient({ matches, unmatchedTx }: ReconciliationCli
           <button
             key={tab.id}
             onClick={() => setFilterTab(tab.id)}
-            className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-colors ${
+            className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors duration-200 ${
               filterTab === tab.id
                 ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
             }`}
           >
             {tab.label}
@@ -138,8 +139,8 @@ export function ReconciliationClient({ matches, unmatchedTx }: ReconciliationCli
 
       {/* Matching Workspace */}
       {displayedMatches.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card/40 p-8 text-center text-xs text-muted-foreground">
-          No matches in this category. Click "Run AI Reconciliation Agent" to score bank lines with multi-signal AI.
+        <div className="rounded-2xl border border-dashed border-border bg-card/30 p-8 text-center text-xs text-muted-foreground">
+          No matches in this category. Click &quot;Run reconciliation agent&quot; to score bank lines.
         </div>
       ) : (
         <div className="space-y-4">
@@ -177,9 +178,9 @@ export function ReconciliationClient({ matches, unmatchedTx }: ReconciliationCli
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
                         confidencePct >= 95
-                          ? "bg-emerald-500/10 text-emerald-500"
+                          ? "bg-positive/10 text-positive"
                           : confidencePct >= 70
-                          ? "bg-amber-500/10 text-amber-500"
+                          ? "bg-warning/10 text-warning"
                           : "bg-destructive/10 text-destructive"
                       }`}
                     >
@@ -202,7 +203,7 @@ export function ReconciliationClient({ matches, unmatchedTx }: ReconciliationCli
                 <div className="flex items-center gap-2">
                   {match.status === "approved" || match.status === "auto_matched" ? (
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                      <div className="flex items-center gap-1 text-xs font-medium text-positive">
                         <CheckCircle2 className="h-4 w-4" />
                         <span>Auto-Matched</span>
                       </div>
@@ -226,7 +227,7 @@ export function ReconciliationClient({ matches, unmatchedTx }: ReconciliationCli
                       <button
                         onClick={() => handleReject(match.id)}
                         disabled={loadingMatchId === match.id}
-                        className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                        className="flex cursor-pointer items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors duration-200 hover:bg-foreground/5 disabled:opacity-50"
                       >
                         <X className="h-3.5 w-3.5" />
                         <span>Reject</span>
@@ -234,10 +235,10 @@ export function ReconciliationClient({ matches, unmatchedTx }: ReconciliationCli
                       <button
                         onClick={() => handleApprove(match.id)}
                         disabled={loadingMatchId === match.id}
-                        className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-transform active:scale-95 hover:bg-emerald-500 disabled:opacity-50"
+                        className="flex cursor-pointer items-center gap-1.5 rounded-full bg-positive px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-transform duration-200 active:scale-[0.98] hover:opacity-90 disabled:opacity-50"
                       >
                         <Check className="h-3.5 w-3.5" />
-                        <span>Approve Match</span>
+                        <span>Approve match</span>
                       </button>
                     </>
                   )}

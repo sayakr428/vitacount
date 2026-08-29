@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Download, FileText, Calendar, Table } from "lucide-react";
 import { downloadCSV } from "@/lib/csv-export";
+import { BezelCard } from "@/components/bezel-card";
 
 interface ReportsClientProps {
   pnlReport: {
@@ -91,40 +92,40 @@ export function ReportsClient({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-[1400px] space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Financial Reports Center</h1>
-          <p className="text-xs text-muted-foreground">
-            Standard GAAP reports generated directly from the double-entry general ledger.
+          <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground">Reports</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Standard GAAP reports generated directly from the general ledger.
           </p>
         </div>
 
         <button
           onClick={handleExportCSV}
-          className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-xs transition-transform active:scale-95 hover:bg-primary/90"
+          className="flex cursor-pointer items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 active:scale-[0.98]"
         >
           <Download className="h-4 w-4" />
-          <span>Export Report to CSV</span>
+          <span>Export to CSV</span>
         </button>
       </div>
 
       {/* Report Selection Tabs */}
-      <div className="flex items-center gap-2 border-b border-border pb-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-full border border-border bg-card p-1.5 w-fit">
         {[
-          { id: "pnl", label: "Profit & Loss (Income Statement)" },
+          { id: "pnl", label: "Profit & Loss" },
           { id: "bs", label: "Balance Sheet" },
-          { id: "ar", label: "AR Aging Report" },
-          { id: "ap", label: "AP Aging Report" },
+          { id: "ar", label: "AR Aging" },
+          { id: "ap", label: "AP Aging" },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveReport(tab.id as any)}
-            className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-colors ${
+            className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors duration-200 ${
               activeReport === tab.id
                 ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
             }`}
           >
             {tab.label}
@@ -134,14 +135,15 @@ export function ReportsClient({
 
       {/* P&L View */}
       {activeReport === "pnl" && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <div className="border-b border-border bg-muted/30 px-6 py-4">
-            <h2 className="text-sm font-semibold text-foreground">Profit & Loss Statement</h2>
+        <div className="rounded-2xl bg-foreground/[0.03] p-1.5 ring-1 ring-foreground/[0.06]">
+        <div className="overflow-hidden rounded-xl bg-card shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+          <div className="border-b border-border/60 px-6 py-4">
+            <h2 className="font-heading text-sm font-semibold text-foreground">Profit &amp; Loss Statement</h2>
           </div>
           <div className="p-6 space-y-6 text-xs">
             {/* Revenue */}
             <div>
-              <h3 className="mb-2 font-semibold uppercase tracking-wide text-emerald-500">Revenue</h3>
+              <h3 className="mb-2 font-semibold uppercase tracking-wide text-positive">Revenue</h3>
               {pnlReport.revenue.length === 0 ? (
                 <p className="text-muted-foreground">No revenue recorded.</p>
               ) : (
@@ -156,7 +158,7 @@ export function ReportsClient({
               )}
               <div className="mt-2 flex justify-between font-bold text-foreground border-t border-border pt-1">
                 <span>Total Revenue</span>
-                <span className="font-mono text-emerald-500">${pnlReport.totalRevenue.toFixed(2)}</span>
+                <span className="font-mono text-positive">${pnlReport.totalRevenue.toFixed(2)}</span>
               </div>
             </div>
 
@@ -184,19 +186,21 @@ export function ReportsClient({
             {/* Net Income Summary */}
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex justify-between text-sm font-bold">
               <span>Net Income</span>
-              <span className={`font-mono ${pnlReport.netIncome >= 0 ? "text-emerald-500" : "text-destructive"}`}>
+              <span className={`font-mono ${pnlReport.netIncome >= 0 ? "text-positive" : "text-destructive"}`}>
                 ${pnlReport.netIncome.toFixed(2)}
               </span>
             </div>
           </div>
         </div>
+        </div>
       )}
 
       {/* Balance Sheet View */}
       {activeReport === "bs" && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <div className="border-b border-border bg-muted/30 px-6 py-4">
-            <h2 className="text-sm font-semibold text-foreground">Balance Sheet</h2>
+        <div className="rounded-2xl bg-foreground/[0.03] p-1.5 ring-1 ring-foreground/[0.06]">
+        <div className="overflow-hidden rounded-xl bg-card shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+          <div className="border-b border-border/60 px-6 py-4">
+            <h2 className="font-heading text-sm font-semibold text-foreground">Balance Sheet</h2>
           </div>
           <div className="p-6 space-y-6 text-xs">
             {/* Assets */}
@@ -218,7 +222,7 @@ export function ReportsClient({
 
             {/* Liabilities */}
             <div>
-              <h3 className="mb-2 font-semibold uppercase tracking-wide text-amber-500">Liabilities</h3>
+              <h3 className="mb-2 font-semibold uppercase tracking-wide text-warning">Liabilities</h3>
               <div className="space-y-1.5">
                 {balanceSheet.liabilities.map((l) => (
                   <div key={l.code} className="flex justify-between border-b border-border/40 py-1 text-muted-foreground">
@@ -229,7 +233,7 @@ export function ReportsClient({
               </div>
               <div className="mt-2 flex justify-between font-bold text-foreground border-t border-border pt-1">
                 <span>Total Liabilities</span>
-                <span className="font-mono text-amber-500">${balanceSheet.totalLiabilities.toFixed(2)}</span>
+                <span className="font-mono text-warning">${balanceSheet.totalLiabilities.toFixed(2)}</span>
               </div>
             </div>
 
@@ -251,13 +255,15 @@ export function ReportsClient({
             </div>
           </div>
         </div>
+        </div>
       )}
 
       {/* AR Aging View */}
       {activeReport === "ar" && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <div className="border-b border-border bg-muted/30 px-6 py-4">
-            <h2 className="text-sm font-semibold text-foreground">Accounts Receivable (AR) Aging Report</h2>
+        <div className="rounded-2xl bg-foreground/[0.03] p-1.5 ring-1 ring-foreground/[0.06]">
+        <div className="overflow-hidden rounded-xl bg-card shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+          <div className="border-b border-border/60 px-6 py-4">
+            <h2 className="font-heading text-sm font-semibold text-foreground">Accounts Receivable (AR) Aging Report</h2>
           </div>
           <div className="p-6 text-xs space-y-4">
             {[
@@ -291,13 +297,15 @@ export function ReportsClient({
             })}
           </div>
         </div>
+        </div>
       )}
 
       {/* AP Aging View */}
       {activeReport === "ap" && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <div className="border-b border-border bg-muted/30 px-6 py-4">
-            <h2 className="text-sm font-semibold text-foreground">Accounts Payable (AP) Aging Report</h2>
+        <div className="rounded-2xl bg-foreground/[0.03] p-1.5 ring-1 ring-foreground/[0.06]">
+        <div className="overflow-hidden rounded-xl bg-card shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+          <div className="border-b border-border/60 px-6 py-4">
+            <h2 className="font-heading text-sm font-semibold text-foreground">Accounts Payable (AP) Aging Report</h2>
           </div>
           <div className="p-6 text-xs space-y-4">
             {[
@@ -330,6 +338,7 @@ export function ReportsClient({
               );
             })}
           </div>
+        </div>
         </div>
       )}
     </div>

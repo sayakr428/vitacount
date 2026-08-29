@@ -36,11 +36,11 @@ export function DocumentListClient({
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="text-xs text-muted-foreground">Draft / Needs Review</div>
-          <div className="mt-1 text-xl font-bold text-amber-500">{pendingCount}</div>
+          <div className="mt-1 text-xl font-bold text-warning">{pendingCount}</div>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="text-xs text-muted-foreground">Posted to GL Ledger</div>
-          <div className="mt-1 text-xl font-bold text-emerald-500">{postedCount}</div>
+          <div className="mt-1 text-xl font-bold text-positive">{postedCount}</div>
         </div>
       </div>
 
@@ -91,10 +91,10 @@ export function DocumentListClient({
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${
                         doc.status === "posted"
-                          ? "bg-emerald-500/10 text-emerald-500"
+                          ? "bg-positive/10 text-positive"
                           : doc.status === "extracted"
-                          ? "bg-amber-500/10 text-amber-500"
-                          : "bg-blue-500/10 text-blue-500"
+                          ? "bg-warning/10 text-warning"
+                          : "bg-chart-2/10 text-chart-2"
                       }`}
                     >
                       {doc.status}
@@ -121,7 +121,7 @@ export function DocumentListClient({
                   </div>
 
                   {confidencePct !== null && (
-                    <div className="mt-3 flex items-center gap-1.5 text-[11px] text-emerald-500">
+                    <div className="mt-3 flex items-center gap-1.5 text-[11px] text-positive">
                       <Sparkles className="h-3.5 w-3.5" />
                       <span>{confidencePct}% OCR Confidence</span>
                     </div>
@@ -130,7 +130,7 @@ export function DocumentListClient({
 
                 <div className="mt-4 border-t border-border/50 pt-3">
                   {doc.status === "posted" ? (
-                    <div className="flex items-center gap-1 text-xs text-emerald-500">
+                    <div className="flex items-center gap-1 text-xs text-positive">
                       <CheckCircle2 className="h-4 w-4" />
                       <span>Verified & Posted</span>
                     </div>
