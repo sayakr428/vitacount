@@ -166,7 +166,9 @@ export async function verifyAndPostExpenseAction(payload: {
   // Call security-definer RPC function post_expense_created
   const { data: expenseId, error: rpcError } = await supabase.rpc("post_expense_created", {
     p_tenant_id: activeTenantId,
-    p_contact_id: contactId,
+    // the generated RPC arg type is non-nullable `string`, but the underlying
+    // Postgres param is a nullable `uuid` — same gap as post_manual_journal_entry.
+    p_contact_id: contactId as string,
     p_expense_date: payload.expenseDate,
     p_amount: payload.amount,
     p_account_id: payload.accountId,

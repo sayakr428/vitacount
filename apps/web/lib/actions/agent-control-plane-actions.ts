@@ -29,9 +29,13 @@ export async function getAgentActionsLogAction(agentNameFilter?: string, statusF
 }
 
 export async function updateAgentAutonomyPolicyAction(agentName: string, level: number) {
+  const { activeTenantId } = await loadTenantContext();
+  if (!activeTenantId) throw new Error("No active workspace");
+
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("set_agent_autonomy_level", {
+    p_tenant_id: activeTenantId,
     p_agent_name: agentName,
     p_level: level,
   });
@@ -42,9 +46,14 @@ export async function updateAgentAutonomyPolicyAction(agentName: string, level: 
 }
 
 export async function triggerEmergencyKillSwitchAction() {
+  const { activeTenantId } = await loadTenantContext();
+  if (!activeTenantId) throw new Error("No active workspace");
+
   const supabase = await createClient();
 
-  const { data, error } = await supabase.rpc("emergency_kill_switch");
+  const { data, error } = await supabase.rpc("emergency_kill_switch", {
+    p_tenant_id: activeTenantId,
+  });
 
   if (error) throw new Error(error.message);
   revalidatePath("/agents");

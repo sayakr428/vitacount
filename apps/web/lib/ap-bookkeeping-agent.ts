@@ -175,7 +175,9 @@ export async function runAPBookkeepingAgent(tenantId: string, documentId: string
       p_expense_date: invoiceDate,
       p_account_id: matchedAccountId,
       p_amount: totalAmount,
-      p_contact_id: null,
+      // the generated RPC arg type is non-nullable `string`, but the underlying
+      // Postgres param is a nullable `uuid` — same gap as post_manual_journal_entry.
+      p_contact_id: null as unknown as string,
       p_payment_method: "card",
       p_document_id: documentId,
       p_memo: `${vendorName} (Auto-posted by AP Agent)`,
