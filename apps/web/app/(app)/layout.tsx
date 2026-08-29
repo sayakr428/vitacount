@@ -36,9 +36,12 @@ export default async function AppLayout({
   return (
     <TenantProvider value={{ memberships, activeTenantId, activeTenant, role }}>
       <div className="flex min-h-full flex-1 bg-background">
-        <Sidebar planName={`${activeTenant?.plan_tier ?? "Starter"} Plan`} />
+        <Sidebar
+          fullName={profile?.full_name ?? null}
+          planName={`${activeTenant?.plan_tier ?? "Starter"} Plan`}
+        />
         <div className="flex min-h-full flex-1 flex-col">
-          <Header fullName={profile?.full_name ?? null} />
+          <Header />
           <div className="px-4 pt-5 md:px-6">
             <ModuleTabs />
           </div>
