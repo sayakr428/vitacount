@@ -25,7 +25,7 @@ export default async function TeamSettingsPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="text-2xl font-semibold">Team — {activeTenant?.name}</h1>
-      <p className="mt-1 text-sm text-zinc-500">
+      <p className="mt-1 text-sm text-muted-foreground">
         {canManage
           ? "Invite teammates and manage their access."
           : "Only owners and admins can invite teammates."}
@@ -36,11 +36,11 @@ export default async function TeamSettingsPage() {
           <CardTitle>Members</CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+          <ul className="divide-y divide-border">
             {(memberships ?? []).map((m) => (
               <li key={m.id} className="flex items-center justify-between py-2">
                 <span>{nameByUserId.get(m.user_id) ?? "Pending profile"}</span>
-                <span className="text-sm text-zinc-500">
+                <span className="text-sm text-muted-foreground">
                   {m.role}
                   {m.status !== "active" ? ` · ${m.status}` : ""}
                 </span>

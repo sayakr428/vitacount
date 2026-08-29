@@ -21,7 +21,7 @@ export function OnboardingForm() {
         <CardTitle>Name your workspace</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="mb-4 text-sm text-zinc-600">
+        <p className="mb-4 text-sm text-muted-foreground">
           This is your business — you can invite teammates once it&apos;s
           created.
         </p>

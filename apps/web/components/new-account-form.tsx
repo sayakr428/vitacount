@@ -30,7 +30,7 @@ export function NewAccountForm({ tenantId }: { tenantId: string }) {
           id="type"
           name="type"
           required
-          className="h-9 rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="h-9 rounded-md border border-border bg-card px-3 text-sm"
         >
           <option value="asset">Asset</option>
           <option value="liability">Liability</option>

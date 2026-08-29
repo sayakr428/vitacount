@@ -1,18 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 
-export async function getDashboardKPIs(tenantId: string, daysBack: number = 30) {
+async function sumJournalLines(tenantId: string, fromDateStr: string, toDateStr: string) {
   const supabase = await createClient();
 
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - daysBack);
-  const startDateStr = startDate.toISOString().slice(0, 10);
-
-  // Fetch journal entry lines joined to accounts for tenant
   const { data: entryLines } = await supabase
     .from("journal_entry_lines")
     .select("debit, credit, account:accounts(type, code), journal_entry:journal_entries(entry_date, tenant_id)")
     .eq("journal_entry.tenant_id", tenantId)
-    .gte("journal_entry.entry_date", startDateStr);
+    .gte("journal_entry.entry_date", fromDateStr)
+    .lt("journal_entry.entry_date", toDateStr);
 
   let totalIncome = 0;
   let totalExpenses = 0;
@@ -43,6 +39,40 @@ export async function getDashboardKPIs(tenantId: string, daysBack: number = 30) 
     totalExpenses: Math.max(0, totalExpenses),
     netProfit,
     netCashFlow,
+  };
+}
+
+/** % change vs the immediately preceding period of equal length — real, not fabricated. */
+function pctChange(current: number, previous: number): number | null {
+  if (previous === 0) return current === 0 ? 0 : null;
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
+
+export async function getDashboardKPIs(tenantId: string, daysBack: number = 30) {
+  const now = new Date();
+  const periodStart = new Date(now);
+  periodStart.setDate(periodStart.getDate() - daysBack);
+  const priorStart = new Date(periodStart);
+  priorStart.setDate(priorStart.getDate() - daysBack);
+
+  const toStr = (d: Date) => d.toISOString().slice(0, 10);
+  // .lt() on entry_date needs an exclusive upper bound one day past "now" to include today.
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const [current, previous] = await Promise.all([
+    sumJournalLines(tenantId, toStr(periodStart), toStr(tomorrow)),
+    sumJournalLines(tenantId, toStr(priorStart), toStr(periodStart)),
+  ]);
+
+  return {
+    ...current,
+    trends: {
+      totalIncome: pctChange(current.totalIncome, previous.totalIncome),
+      totalExpenses: pctChange(current.totalExpenses, previous.totalExpenses),
+      netProfit: pctChange(current.netProfit, previous.netProfit),
+      netCashFlow: pctChange(current.netCashFlow, previous.netCashFlow),
+    },
   };
 }
 

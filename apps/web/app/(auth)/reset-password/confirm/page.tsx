@@ -13,7 +13,7 @@ export default function ResetPasswordConfirmPage() {
   const [state, formAction, pending] = useActionState(updatePassword, initialState);
 
   return (
-    <Card>
+    <Card className="shadow-soft">
       <CardHeader>
         <CardTitle>Set a new password</CardTitle>
       </CardHeader>
@@ -31,7 +31,7 @@ export default function ResetPasswordConfirmPage() {
             />
           </div>
           {state.error ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-destructive" role="alert">
               {state.error}
             </p>
           ) : null}

@@ -4,6 +4,7 @@ import { loadTenantContext } from "@/lib/tenant/data";
 import { TenantProvider } from "@/lib/tenant/context";
 import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
+import { ModuleTabs } from "@/components/module-tabs";
 
 export default async function AppLayout({
   children,
@@ -38,6 +39,9 @@ export default async function AppLayout({
         <Sidebar planName={`${activeTenant?.plan_tier ?? "Starter"} Plan`} />
         <div className="flex min-h-full flex-1 flex-col">
           <Header fullName={profile?.full_name ?? null} />
+          <div className="px-4 pt-5 md:px-6">
+            <ModuleTabs />
+          </div>
           <main className="flex-1 px-4 py-6 md:px-6 md:py-8">{children}</main>
         </div>
       </div>

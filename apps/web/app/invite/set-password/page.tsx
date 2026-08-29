@@ -13,14 +13,14 @@ export default function SetPasswordPage() {
   const [state, formAction, pending] = useActionState(updatePassword, initialState);
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 py-16 dark:bg-black">
+    <div className="flex flex-1 items-center justify-center bg-muted/40 px-4 py-16">
       <div className="w-full max-w-sm">
-        <Card>
+        <Card className="shadow-soft">
           <CardHeader>
             <CardTitle>Welcome — set your password</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="mb-4 text-sm text-zinc-600">
+            <p className="mb-4 text-sm text-muted-foreground">
               You&apos;ve joined the workspace. Set a password so you can log
               back in later.
             </p>
@@ -37,7 +37,7 @@ export default function SetPasswordPage() {
                 />
               </div>
               {state.error ? (
-                <p className="text-sm text-red-600" role="alert">
+                <p className="text-sm text-destructive" role="alert">
                   {state.error}
                 </p>
               ) : null}

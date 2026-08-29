@@ -20,7 +20,7 @@ export function TenantSwitcher() {
 
   return (
     <select
-      className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+      className="rounded-md border border-border bg-card px-2 py-1 text-sm"
       value={activeTenantId ?? ""}
       disabled={pending}
       onChange={(event) => {

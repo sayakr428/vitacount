@@ -51,7 +51,7 @@ export default async function ChartOfAccountsPage() {
             {grouped[type]?.length ? (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-zinc-200 text-left text-zinc-500 dark:border-zinc-800">
+                  <tr className="border-b border-border text-left text-muted-foreground">
                     <th className="py-1 pr-4 font-medium">Code</th>
                     <th className="py-1 pr-4 font-medium">Name</th>
                     <th className="py-1 font-medium">Subtype</th>
@@ -59,16 +59,16 @@ export default async function ChartOfAccountsPage() {
                 </thead>
                 <tbody>
                   {grouped[type].map((a) => (
-                    <tr key={a.id} className="border-b border-zinc-100 dark:border-zinc-900">
-                      <td className="py-1.5 pr-4 font-mono text-zinc-500">{a.code}</td>
+                    <tr key={a.id} className="border-b border-border/60">
+                      <td className="py-1.5 pr-4 font-mono text-muted-foreground">{a.code}</td>
                       <td className="py-1.5 pr-4">{a.name}</td>
-                      <td className="py-1.5 text-zinc-500">{a.subtype ?? "—"}</td>
+                      <td className="py-1.5 text-muted-foreground">{a.subtype ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <p className="text-sm text-zinc-500">No accounts yet.</p>
+              <p className="text-sm text-muted-foreground">No accounts yet.</p>
             )}
           </CardContent>
         </Card>

@@ -14,7 +14,7 @@ export default function SignupPage() {
   const [state, formAction, pending] = useActionState(signUp, initialState);
 
   return (
-    <Card>
+    <Card className="shadow-soft">
       <CardHeader>
         <CardTitle>Create your VitaCount account</CardTitle>
       </CardHeader>
@@ -40,7 +40,7 @@ export default function SignupPage() {
             />
           </div>
           {state.error ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-destructive" role="alert">
               {state.error}
             </p>
           ) : null}
@@ -48,7 +48,7 @@ export default function SignupPage() {
             {pending ? "Creating account…" : "Sign up"}
           </Button>
         </form>
-        <div className="mt-4 text-sm text-zinc-500">
+        <div className="mt-4 text-sm text-muted-foreground">
           Already have an account?{" "}
           <Link href="/login" className="hover:underline">
             Log in

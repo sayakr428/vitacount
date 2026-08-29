@@ -56,7 +56,7 @@ export function InviteForm({ tenantId }: { tenantId: string }) {
         <Label htmlFor="invite-role">Role</Label>
         <select
           id="invite-role"
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm"
           value={role}
           onChange={(e) => setRole(e.target.value as (typeof ROLES)[number])}
         >
@@ -73,7 +73,7 @@ export function InviteForm({ tenantId }: { tenantId: string }) {
         </p>
       ) : null}
       {success ? (
-        <p className="text-sm text-green-600">Invite sent.</p>
+        <p className="text-sm text-positive">Invite sent.</p>
       ) : null}
       <Button type="submit" disabled={pending} className="w-fit">
         {pending ? "Sending…" : "Send invite"}

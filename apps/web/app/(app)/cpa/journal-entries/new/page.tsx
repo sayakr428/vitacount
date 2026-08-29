@@ -15,7 +15,7 @@ export default async function NewJournalEntryPage() {
           <CardTitle>Not authorized</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             Only owners, admins, and accountants can post journal entries.
           </p>
         </CardContent>

@@ -29,7 +29,7 @@ export default async function JournalEntriesPage() {
       </div>
 
       {(entries ?? []).length === 0 ? (
-        <p className="text-sm text-zinc-500">No journal entries yet.</p>
+        <p className="text-sm text-muted-foreground">No journal entries yet.</p>
       ) : (
         (entries ?? []).map((entry) => {
           const total = entry.journal_entry_lines.reduce(
@@ -43,7 +43,7 @@ export default async function JournalEntriesPage() {
                   <span>
                     {entry.entry_date} — {entry.memo || "(no memo)"}
                   </span>
-                  <span className="text-sm text-zinc-500">
+                  <span className="text-sm text-muted-foreground">
                     ${total.toFixed(2)} · {entry.status}
                   </span>
                 </CardTitle>
@@ -52,8 +52,8 @@ export default async function JournalEntriesPage() {
                 <table className="w-full text-sm">
                   <tbody>
                     {entry.journal_entry_lines.map((line) => (
-                      <tr key={line.id} className="border-b border-zinc-100 last:border-0 dark:border-zinc-900">
-                        <td className="py-1 pr-4 font-mono text-zinc-500">
+                      <tr key={line.id} className="border-b border-border/60 last:border-0">
+                        <td className="py-1 pr-4 font-mono text-muted-foreground">
                           {line.account?.code}
                         </td>
                         <td className="py-1 pr-4">{line.account?.name}</td>

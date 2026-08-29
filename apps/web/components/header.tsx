@@ -5,6 +5,8 @@ import { signOut } from "@/lib/actions/auth";
 import { TenantSwitcher } from "@/components/tenant-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CPAModeToggle } from "@/components/cpa-mode-toggle";
+import { LogoMark } from "@/components/logo-mark";
+import { NewMenu } from "@/components/new-menu";
 import { useTenant } from "@/lib/tenant/context";
 
 export function Header({ fullName }: { fullName: string | null }) {
@@ -13,26 +15,29 @@ export function Header({ fullName }: { fullName: string | null }) {
 
   return (
     <div className="sticky top-4 z-30 mx-4 mt-4 md:mx-6">
-      <header className="flex items-center justify-between gap-4 rounded-full border border-border/60 bg-card/80 px-4 py-2 shadow-sm backdrop-blur-xl">
+      <header className="flex items-center justify-between gap-4 rounded-full border border-border/70 bg-card/85 px-3 py-2 shadow-soft-sm backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="flex items-center gap-2 font-heading text-sm font-semibold">
-            <span className="flex size-6 items-center justify-center rounded-full bg-primary text-[11px] text-primary-foreground">
-              V
-            </span>
+          <Link href="/dashboard" className="flex items-center gap-2 pl-1 font-heading text-[15px] font-semibold tracking-tight">
+            <LogoMark />
             VitaCount
           </Link>
           <TenantSwitcher />
         </div>
 
-        <div className="hidden flex-1 max-w-sm items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-sm text-muted-foreground md:flex">
+        <div className="hidden flex-1 max-w-md items-center gap-2 rounded-full bg-muted/70 px-4 py-2 text-sm text-muted-foreground transition-colors duration-200 focus-within:bg-muted md:flex">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-4 shrink-0">
             <circle cx="10.5" cy="10.5" r="6.5" />
             <path strokeLinecap="round" d="m20 20-4.35-4.35" />
           </svg>
-          <span className="truncate">Search invoices, contacts, transactions…</span>
+          <input
+            type="text"
+            placeholder="Navigate. Find transactions, contacts, reports, and more."
+            className="w-full truncate bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none"
+          />
         </div>
 
         <nav className="flex items-center gap-2 text-sm">
+          <NewMenu />
           <CPAModeToggle />
           <ThemeToggle />
           <Link

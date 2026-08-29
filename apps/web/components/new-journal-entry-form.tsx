@@ -85,7 +85,7 @@ export function NewJournalEntryForm({
 
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-zinc-500">
+          <tr className="text-left text-muted-foreground">
             <th className="pb-2 font-medium">Account</th>
             <th className="w-28 pb-2 font-medium">Debit</th>
             <th className="w-28 pb-2 font-medium">Credit</th>
@@ -99,7 +99,7 @@ export function NewJournalEntryForm({
                 <select
                   value={row.accountId}
                   onChange={(e) => updateRow(i, { accountId: e.target.value })}
-                  className="h-9 w-full rounded-md border border-zinc-300 bg-white px-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="h-9 w-full rounded-md border border-border bg-card px-2 text-sm"
                 >
                   <option value="">Select account…</option>
                   {accounts.map((a) => (
@@ -151,8 +151,8 @@ export function NewJournalEntryForm({
         + Add line
       </Button>
 
-      <div className="flex items-center justify-between border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
-        <span className={balanced ? "text-green-600" : "text-zinc-500"}>
+      <div className="flex items-center justify-between border-t border-border pt-3 text-sm">
+        <span className={balanced ? "text-positive" : "text-muted-foreground"}>
           Debit ${totalDebit.toFixed(2)} · Credit ${totalCredit.toFixed(2)}
           {balanced ? " · balanced" : ""}
         </span>

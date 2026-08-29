@@ -17,7 +17,7 @@ export default function ResetPasswordPage() {
   );
 
   return (
-    <Card>
+    <Card className="shadow-soft">
       <CardHeader>
         <CardTitle>Reset your password</CardTitle>
       </CardHeader>
@@ -28,7 +28,7 @@ export default function ResetPasswordPage() {
             <Input id="email" name="email" type="email" required autoComplete="email" />
           </div>
           {state.error ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-destructive" role="alert">
               {state.error}
             </p>
           ) : null}
@@ -36,7 +36,7 @@ export default function ResetPasswordPage() {
             {pending ? "Sending…" : "Send reset link"}
           </Button>
         </form>
-        <div className="mt-4 text-sm text-zinc-500">
+        <div className="mt-4 text-sm text-muted-foreground">
           <Link href="/login" className="hover:underline">
             Back to login
           </Link>

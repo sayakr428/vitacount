@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [state, formAction, pending] = useActionState(signIn, initialState);
 
   return (
-    <Card>
+    <Card className="shadow-soft">
       <CardHeader>
         <CardTitle>Log in to VitaCount</CardTitle>
       </CardHeader>
@@ -35,7 +35,7 @@ export default function LoginPage() {
             />
           </div>
           {state.error ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-destructive" role="alert">
               {state.error}
             </p>
           ) : null}
@@ -43,7 +43,7 @@ export default function LoginPage() {
             {pending ? "Logging in…" : "Log in"}
           </Button>
         </form>
-        <div className="mt-4 flex justify-between text-sm text-zinc-500">
+        <div className="mt-4 flex justify-between text-sm text-muted-foreground">
           <Link href="/signup" className="hover:underline">
             Create an account
           </Link>
