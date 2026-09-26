@@ -15,15 +15,18 @@ export async function runRuleBasedMatcherForTenant(tenantId: string) {
   }
 
   // Fetch open invoices, bills, and expenses for matching
+  // Refunds (money out) and supplier credits (not a payment) never match bank lines.
   const { data: invoices } = await supabase
     .from("invoices")
     .select("id, invoice_number, total, balance_due, issue_date, contact:contacts(display_name)")
-    .eq("tenant_id", tenantId);
+    .eq("tenant_id", tenantId)
+    .in("document_type", ["invoice", "debit_note", "sales_receipt"]);
 
   const { data: bills } = await supabase
     .from("bills")
     .select("id, bill_number, total, balance_due, issue_date, vendor:contacts(display_name)")
-    .eq("tenant_id", tenantId);
+    .eq("tenant_id", tenantId)
+    .eq("document_type", "bill");
 
   const { data: expenses } = await supabase
     .from("expenses")

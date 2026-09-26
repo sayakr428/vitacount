@@ -7,6 +7,19 @@ interface TransactionsFeedClientProps {
   initialTransactions: any[];
 }
 
+const TYPE_LABEL: Record<string, string> = {
+  all: "all",
+  invoice: "invoice",
+  sales_receipt: "sales receipt",
+  refund_receipt: "refund",
+  debit_note: "debit note",
+  payment_received: "payment received",
+  bill: "bill",
+  vendor_credit: "supplier credit",
+  expense: "expense",
+  payment_made: "payment made",
+};
+
 export function TransactionsFeedClient({ initialTransactions }: TransactionsFeedClientProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -46,7 +59,7 @@ export function TransactionsFeedClient({ initialTransactions }: TransactionsFeed
         </div>
 
         <div className="flex flex-wrap items-center gap-2 rounded-full border border-border bg-card p-1.5">
-          {["all", "invoice", "bill", "expense", "payment_received", "payment_made"].map((type) => (
+          {Object.keys(TYPE_LABEL).map((type) => (
             <button
               key={type}
               onClick={() => setTypeFilter(type)}
@@ -56,7 +69,7 @@ export function TransactionsFeedClient({ initialTransactions }: TransactionsFeed
                   : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
               }`}
             >
-              {type.replace("_", " ")}
+              {TYPE_LABEL[type]}
             </button>
           ))}
         </div>
@@ -80,7 +93,7 @@ export function TransactionsFeedClient({ initialTransactions }: TransactionsFeed
                     <div>
                       <div className="font-semibold text-foreground">{tx.description}</div>
                       <div className="text-[11px] text-muted-foreground">
-                        {tx.party_name || "General"} • {tx.transaction_date} • <span className="capitalize">{tx.transaction_type.replace("_", " ")}</span>
+                        {tx.party_name || "General"} • {tx.transaction_date} • <span className="capitalize">{TYPE_LABEL[tx.transaction_type] ?? tx.transaction_type.replace(/_/g, " ")}</span>
                       </div>
                     </div>
                   </div>

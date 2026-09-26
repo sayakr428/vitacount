@@ -8,6 +8,8 @@ import {
   recordVendorPaymentAction,
   type RecordVendorPaymentState,
 } from "@/lib/actions/vendor-payments";
+import { todayISO } from "@/lib/dates";
+import { PAYMENT_METHODS } from "@/lib/documents";
 
 const initialState: RecordVendorPaymentState = { error: null };
 
@@ -31,7 +33,7 @@ export function RecordVendorPaymentForm({
     <form action={formAction} className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-2">
         <Label htmlFor="paymentDate">Date</Label>
-        <Input id="paymentDate" name="paymentDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+        <Input id="paymentDate" name="paymentDate" type="date" required defaultValue={todayISO()} />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="amount">Amount</Label>
@@ -40,11 +42,16 @@ export function RecordVendorPaymentForm({
       <div className="flex flex-col gap-2">
         <Label htmlFor="method">Method</Label>
         <select id="method" name="method" defaultValue="bank_transfer" className="h-9 rounded-lg border border-border bg-background px-3 text-sm">
-          <option value="bank_transfer">Bank transfer</option>
-          <option value="check">Check</option>
-          <option value="cash">Cash</option>
-          <option value="card">Card</option>
+          {PAYMENT_METHODS.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
+            </option>
+          ))}
         </select>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="reference">Reference</Label>
+        <Input id="reference" name="reference" placeholder="Check #, etc." className="w-36" />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="scheduledFor">Schedule for (optional)</Label>

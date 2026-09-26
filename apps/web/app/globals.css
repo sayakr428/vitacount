@@ -12,6 +12,8 @@
   --font-heading: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --color-positive: var(--positive);
   --color-warning: var(--warning);
+  --color-series-income: var(--series-income);
+  --color-series-expense: var(--series-expense);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -79,6 +81,10 @@
   --chart-3: oklch(0.75 0.16 75);
   --chart-4: oklch(0.58 0.22 27);
   --chart-5: oklch(0.62 0.02 261);
+  /* Income vs. expenses series — a validated blue/orange pair (colorblind-safe, ≥3:1 on
+     the surface). Chart-1/chart-2 were too close to tell apart in dark mode. */
+  --series-income: oklch(0.531 0.189 261.8);
+  --series-expense: oklch(0.671 0.175 40.6);
   --radius: 1rem;
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.24 0.03 261);
@@ -117,6 +123,8 @@
   --chart-3: oklch(0.78 0.15 75);
   --chart-4: oklch(0.66 0.19 25);
   --chart-5: oklch(0.62 0.02 258);
+  --series-income: oklch(0.622 0.161 255.1);
+  --series-expense: oklch(0.622 0.173 40.1);
   --sidebar: oklch(0.15 0.025 261);
   --sidebar-foreground: oklch(0.94 0.012 255);
   --sidebar-primary: oklch(0.68 0.17 262);
@@ -180,5 +188,35 @@
   }
   .scrollbar-none::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* Printing a sales document. PrintPortal mounts `.print-root` as a direct child of
+   <body>; while one exists, the printout is that document alone — the app shell,
+   dialogs and everything else stay on screen only. Browsers offer "Save as PDF" in
+   the same dialog. */
+.print-root {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  body:has(> .print-root) > :not(.print-root) {
+    display: none !important;
+  }
+  /* dark theme sets color-scheme on <html>, which would tint the page margins */
+  html:has(> body > .print-root),
+  body:has(> .print-root) {
+    background: #fff !important;
+    color-scheme: light !important;
+  }
+  .print-root {
+    display: block !important;
+  }
+  .print-root * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

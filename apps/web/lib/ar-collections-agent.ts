@@ -17,7 +17,8 @@ export async function calculateCustomerRiskScores(tenantId: string): Promise<Rec
   const { data: invoices } = await supabase
     .from("invoices")
     .select("id, contact_id, issue_date, due_date, status, customer:contacts(display_name)")
-    .eq("tenant_id", tenantId);
+    .eq("tenant_id", tenantId)
+    .in("document_type", ["invoice", "debit_note"]);
 
   const { data: payments } = await supabase
     .from("payments_received")
@@ -33,7 +34,8 @@ export async function calculateCustomerRiskScores(tenantId: string): Promise<Rec
       customerDelays[inv.contact_id] = { name, delays: [] };
     }
 
-    if (inv.status === "paid") {
+    // Without a due date there's no "late" to measure.
+    if (inv.status === "paid" && inv.due_date) {
       const dueDate = new Date(inv.due_date);
       // Find matching payment date or estimate
       const matchingPay = payments?.find((p) => p.contact_id === inv.contact_id);
@@ -90,8 +92,10 @@ export async function runARCollectionsAgent(tenantId: string) {
     .from("invoices")
     .select("id, invoice_number, total, balance_due, issue_date, due_date, contact_id, customer:contacts(display_name, email)")
     .eq("tenant_id", tenantId)
-    .lt("due_date", todayStr)
-    .neq("status", "paid");
+    // issued, unpaid receivables with a due date that has passed (drafts were never sent)
+    .in("document_type", ["invoice", "debit_note"])
+    .in("status", ["sent", "partial", "overdue"])
+    .lt("due_date", todayStr);
 
   if (!overdueInvoices || overdueInvoices.length === 0) {
     return { processed: 0, scheduled: 0 };
@@ -100,7 +104,7 @@ export async function runARCollectionsAgent(tenantId: string) {
   let scheduledCount = 0;
 
   for (const inv of overdueInvoices) {
-    if (!inv.contact_id) continue;
+    if (!inv.contact_id || !inv.due_date) continue;
 
     const dueDate = new Date(inv.due_date);
     const overdueDays = Math.max(0, Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 3600 * 24)));

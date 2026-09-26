@@ -318,7 +318,8 @@ export type Database = {
           bill_number: string | null
           created_at: string
           created_by: string | null
-          due_date: string
+          document_type: string
+          due_date: string | null
           id: string
           issue_date: string
           project_id: string | null
@@ -333,7 +334,8 @@ export type Database = {
           bill_number?: string | null
           created_at?: string
           created_by?: string | null
-          due_date: string
+          document_type?: string
+          due_date?: string | null
           id?: string
           issue_date: string
           project_id?: string | null
@@ -348,7 +350,8 @@ export type Database = {
           bill_number?: string | null
           created_at?: string
           created_by?: string | null
-          due_date?: string
+          document_type?: string
+          due_date?: string | null
           id?: string
           issue_date?: string
           project_id?: string | null
@@ -767,11 +770,15 @@ export type Database = {
           created_at: string
           created_by: string | null
           currency: string
-          due_date: string
+          document_type: string
+          due_date: string | null
           id: string
           invoice_number: string
           issue_date: string
+          payment_method: string | null
+          payment_reference: string | null
           project_id: string | null
+          refund_source: string | null
           status: string
           subtotal: number
           tax_total: number
@@ -784,11 +791,15 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
-          due_date: string
+          document_type?: string
+          due_date?: string | null
           id?: string
           invoice_number: string
           issue_date: string
+          payment_method?: string | null
+          payment_reference?: string | null
           project_id?: string | null
+          refund_source?: string | null
           status?: string
           subtotal?: number
           tax_total?: number
@@ -801,11 +812,15 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
-          due_date?: string
+          document_type?: string
+          due_date?: string | null
           id?: string
           invoice_number?: string
           issue_date?: string
+          payment_method?: string | null
+          payment_reference?: string | null
           project_id?: string | null
+          refund_source?: string | null
           status?: string
           subtotal?: number
           tax_total?: number
@@ -1009,18 +1024,21 @@ export type Database = {
       payment_applications: {
         Row: {
           amount_applied: number
+          created_at: string
           id: string
           invoice_id: string
           payment_id: string
         }
         Insert: {
           amount_applied: number
+          created_at?: string
           id?: string
           invoice_id: string
           payment_id: string
         }
         Update: {
           amount_applied?: number
+          created_at?: string
           id?: string
           invoice_id?: string
           payment_id?: string
@@ -1050,6 +1068,7 @@ export type Database = {
           id: string
           method: string | null
           payment_date: string
+          reference: string | null
           scheduled_for: string | null
           tenant_id: string
           vendor_id: string
@@ -1061,6 +1080,7 @@ export type Database = {
           id?: string
           method?: string | null
           payment_date: string
+          reference?: string | null
           scheduled_for?: string | null
           tenant_id: string
           vendor_id: string
@@ -1072,6 +1092,7 @@ export type Database = {
           id?: string
           method?: string | null
           payment_date?: string
+          reference?: string | null
           scheduled_for?: string | null
           tenant_id?: string
           vendor_id?: string
@@ -1105,6 +1126,7 @@ export type Database = {
           reference: string | null
           stripe_payment_intent_id: string | null
           tenant_id: string
+          unapplied_amount: number
         }
         Insert: {
           amount: number
@@ -1117,6 +1139,7 @@ export type Database = {
           reference?: string | null
           stripe_payment_intent_id?: string | null
           tenant_id: string
+          unapplied_amount?: number
         }
         Update: {
           amount?: number
@@ -1129,6 +1152,7 @@ export type Database = {
           reference?: string | null
           stripe_payment_intent_id?: string | null
           tenant_id?: string
+          unapplied_amount?: number
         }
         Relationships: [
           {
@@ -1328,6 +1352,61 @@ export type Database = {
           },
         ]
       }
+      vendor_credit_applications: {
+        Row: {
+          amount_applied: number
+          applied_on: string
+          bill_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          tenant_id: string
+          vendor_credit_id: string
+        }
+        Insert: {
+          amount_applied: number
+          applied_on?: string
+          bill_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          tenant_id: string
+          vendor_credit_id: string
+        }
+        Update: {
+          amount_applied?: number
+          applied_on?: string
+          bill_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          tenant_id?: string
+          vendor_credit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_credit_applications_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_credit_applications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_credit_applications_vendor_credit_id_fkey"
+            columns: ["vendor_credit_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_rules: {
         Row: {
           created_at: string
@@ -1411,6 +1490,14 @@ export type Database = {
         Returns: undefined
       }
       accept_invite: { Args: { p_tenant_id: string }; Returns: undefined }
+      apply_customer_credit: {
+        Args: { p_contact_id: string; p_tenant_id: string }
+        Returns: number
+      }
+      apply_vendor_credits: {
+        Args: { p_tenant_id: string; p_vendor_id: string }
+        Returns: number
+      }
       create_bill_received: {
         Args: {
           p_bill_number: string
@@ -1422,7 +1509,30 @@ export type Database = {
         }
         Returns: string
       }
+      create_sales_document: {
+        Args: {
+          p_contact_id: string
+          p_document_type: string
+          p_due_date: string
+          p_issue_date: string
+          p_lines: Json
+          p_payment_method: string
+          p_payment_reference: string
+          p_tenant_id: string
+        }
+        Returns: string
+      }
       create_tenant: { Args: { tenant_name: string }; Returns: string }
+      create_vendor_credit: {
+        Args: {
+          p_credit_number: string
+          p_issue_date: string
+          p_lines: Json
+          p_tenant_id: string
+          p_vendor_id: string
+        }
+        Returns: string
+      }
       current_admin_tenant_ids: { Args: never; Returns: string[] }
       current_member_tenant_ids: { Args: never; Returns: string[] }
       current_tenant_ids: { Args: never; Returns: string[] }
@@ -1432,7 +1542,23 @@ export type Database = {
         Returns: undefined
       }
       lookup_user_id_by_email: { Args: { p_email: string }; Returns: string }
+      next_document_number: {
+        Args: { p_document_type: string; p_tenant_id: string }
+        Returns: string
+      }
       next_invoice_number: { Args: { p_tenant_id: string }; Returns: string }
+      pay_vendor_bills: {
+        Args: {
+          p_amount: number
+          p_applications: Json
+          p_method: string
+          p_payment_date: string
+          p_reference: string
+          p_tenant_id: string
+          p_vendor_id: string
+        }
+        Returns: string
+      }
       post_expense_created: {
         Args: {
           p_account_id: string
@@ -1481,6 +1607,17 @@ export type Database = {
         }
         Returns: string
       }
+      refund_customer_credit: {
+        Args: {
+          p_amount: number
+          p_contact_id: string
+          p_method: string
+          p_reference: string
+          p_refund_date: string
+          p_tenant_id: string
+        }
+        Returns: string
+      }
       seed_default_chart_of_accounts: {
         Args: { p_tenant_id: string }
         Returns: undefined
@@ -1507,12 +1644,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1536,11 +1673,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1561,11 +1698,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1586,11 +1723,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1603,11 +1740,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

@@ -1,8 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useTransition } from "react";
 import { BezelCard } from "@/components/bezel-card";
+import { DashboardRangeFilter } from "@/components/dashboard-range-filter";
+import { IncomeExpenseChart } from "@/components/income-expense-chart";
+import type { DashboardRange } from "@/lib/date-range";
+import type { SeriesPoint } from "@/lib/dashboard-queries";
 
 interface BankAccountRow {
   id: string;
@@ -23,6 +28,10 @@ interface RecentTransactionRow {
 interface DashboardClientProps {
   firstName: string;
   role: string | null;
+  range: DashboardRange;
+  /** e.g. "Aug 1 – Aug 24, 2026" — the like-for-like window the KPI deltas compare against */
+  comparisonLabel: string;
+  series: SeriesPoint[];
   kpis: {
     totalIncome: number;
     totalExpenses: number;
@@ -181,6 +190,9 @@ const sampleProjects = [
 export function DashboardClient({
   firstName,
   role,
+  range,
+  comparisonLabel,
+  series,
   kpis,
   bankAccounts,
   reconciliationSummary,
@@ -188,7 +200,26 @@ export function DashboardClient({
   overdueAlerts,
   recentTransactions,
 }: DashboardClientProps) {
-  const [daysRange, setDaysRange] = useState("30");
+  const router = useRouter();
+  const pathname = usePathname();
+  const [pending, startTransition] = useTransition();
+
+  // The range lives in the URL (shareable, survives refresh) and every widget
+  // re-renders server-side against the same slice.
+  function updateParams(changes: Record<string, string | null>) {
+    const current: Record<string, string | null> = {
+      range: range.preset,
+      from: range.preset === "custom" ? range.from : null,
+      to: range.preset === "custom" ? range.to : null,
+      group: range.granularity !== range.autoGranularity ? range.granularity : null,
+      compare: range.compare ? "1" : null,
+    };
+    const next = new URLSearchParams();
+    for (const [key, value] of Object.entries({ ...current, ...changes })) {
+      if (value) next.set(key, value);
+    }
+    startTransition(() => router.push(`${pathname}?${next.toString()}`, { scroll: false }));
+  }
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -211,7 +242,7 @@ export function DashboardClient({
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-5">
-      {/* Greeting Header */}
+      {/* Greeting Header + the one date filter that scopes everything below it */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 font-heading text-2xl font-semibold tracking-tight text-foreground">
@@ -223,17 +254,11 @@ export function DashboardClient({
           </p>
         </div>
 
-        <select
-          value={daysRange}
-          onChange={(e) => setDaysRange(e.target.value)}
-          className="cursor-pointer rounded-full border border-border bg-card px-4 py-2 text-xs font-medium text-foreground shadow-soft-sm transition-colors duration-200 hover:bg-foreground/5 focus:outline-hidden"
-        >
-          <option value="7">Last 7 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-        </select>
+        <DashboardRangeFilter range={range} pending={pending} onChange={updateParams} />
       </div>
 
+      {/* While a new range loads, keep the previous render (dimmed) instead of flashing empty */}
+      <div className={`space-y-5 transition-opacity duration-200 ${pending ? "opacity-60" : ""}`} aria-busy={pending}>
       {/* KPIs (left, wide) + Bank Accounts (right rail) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -243,8 +268,8 @@ export function DashboardClient({
                 <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{card.label}</span>
                 <TrendPill value={card.trend} />
               </div>
-              <p className={`mt-3 font-heading text-2xl font-semibold tabular-nums ${toneClass[card.tone]}`}>{currency(card.value)}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">vs previous {daysRange} days</p>
+              <p className={`mt-3 font-heading text-2xl font-semibold ${toneClass[card.tone]}`}>{currency(card.value)}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">vs {comparisonLabel}</p>
             </BezelCard>
           ))}
         </div>
@@ -289,6 +314,18 @@ export function DashboardClient({
           </Link>
         </BezelCard>
       </div>
+
+      {/* Income vs expenses over the selected range */}
+      <BezelCard>
+        <IncomeExpenseChart
+          series={series}
+          granularity={range.granularity}
+          granularityOptions={range.granularityOptions}
+          compare={range.compare}
+          onGranularityChange={(g) => updateParams({ group: g === range.autoGranularity ? null : g })}
+          onCompareChange={(compare) => updateParams({ compare: compare ? "1" : null })}
+        />
+      </BezelCard>
 
       {/* Reconciliation + Cash Flow + Project Profitability */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -467,7 +504,7 @@ export function DashboardClient({
             </Link>
           </div>
           {recentTransactions.length === 0 ? (
-            <div className="p-6 text-center text-xs text-muted-foreground">No recent transactions.</div>
+            <div className="p-6 text-center text-xs text-muted-foreground">No transactions in this period.</div>
           ) : (
             <div className="divide-y divide-border/40 text-xs">
               {recentTransactions.slice(0, 5).map((tx) => {
@@ -495,6 +532,7 @@ export function DashboardClient({
             </div>
           )}
         </BezelCard>
+      </div>
       </div>
 
       {/* Trust footer */}

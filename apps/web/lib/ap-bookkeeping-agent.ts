@@ -115,6 +115,7 @@ export async function runAPBookkeepingAgent(tenantId: string, documentId: string
       .from("bills")
       .select("id, total, issue_date")
       .eq("tenant_id", tenantId)
+      .eq("document_type", "bill")
       .gte("issue_date", startDate.toISOString().slice(0, 10))
       .lte("issue_date", endDate.toISOString().slice(0, 10));
 

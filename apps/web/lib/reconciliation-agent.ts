@@ -52,12 +52,14 @@ export async function runReconciliationAgentForTenant(tenantId: string) {
     .from("invoices")
     .select("id, invoice_number, total, balance_due, issue_date, customer:contacts(display_name)")
     .eq("tenant_id", tenantId)
+    .in("document_type", ["invoice", "debit_note"])
     .neq("status", "paid");
 
   const { data: bills } = await supabase
     .from("bills")
     .select("id, bill_number, total, balance_due, issue_date, vendor:contacts(display_name)")
     .eq("tenant_id", tenantId)
+    .eq("document_type", "bill")
     .neq("status", "paid");
 
   const { data: expenses } = await supabase
