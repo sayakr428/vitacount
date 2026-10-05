@@ -1,0 +1,9 @@
+# `pipecat cloud deploy --yes` reads this file.
+agent_name = "vita"
+secret_set = "vita-secrets"
+agent_profile = "agent-1x"
+
+[scaling]
+	# 0 = pay only while sessions run (first connect after idle is slower).
+	# 1 = always-warm instance for instant connects, billed while idle.
+	min_agents = 0

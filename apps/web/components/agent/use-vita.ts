@@ -210,6 +210,9 @@ export function useVita({
           endpoint: `${session.botUrl.replace(/\/$/, "")}/start`,
           requestData: {
             transport: "webrtc",
+            // Pipecat Cloud returns STUN/TURN servers so audio gets through
+            // restrictive networks; the local runner falls back to public STUN.
+            enableDefaultIceServers: true,
             // Skip the greeting when the user already typed a question.
             body: { token: session.sessionToken, path: currentPath(), mode, greet: pendingTextRef.current.length === 0 },
           },

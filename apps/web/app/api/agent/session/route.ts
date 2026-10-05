@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/supabase/user";
 import { loadTenantContext } from "@/lib/tenant/data";
 import { signAgentSessionToken } from "@/lib/agent-session";
+import { pipecatCloudConfig } from "@/lib/pipecat-cloud";
 
 /**
  * Mints the short-lived token the Vita dock hands to the voice bot when it
@@ -14,7 +15,9 @@ export async function POST() {
   }
 
   const secret = process.env.AGENT_SHARED_SECRET;
-  const botUrl = process.env.NEXT_PUBLIC_AGENT_URL;
+  // On Pipecat Cloud the dock talks to our same-origin proxy routes
+  // (/api/agent/start, /api/agent/sessions/*); locally, straight to the bot.
+  const botUrl = pipecatCloudConfig() ? "/api/agent" : process.env.NEXT_PUBLIC_AGENT_URL;
   if (!secret || !botUrl) {
     return NextResponse.json({ error: "Vita is not configured." }, { status: 503 });
   }
