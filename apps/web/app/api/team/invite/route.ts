@@ -35,6 +35,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   }
 
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    // createAdminClient() would throw and the route would 500 with no body.
+    return NextResponse.json(
+      { error: "Email invites aren't set up yet — add SUPABASE_SERVICE_ROLE_KEY to the server environment." },
+      { status: 503 },
+    );
+  }
+
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
   const admin = createAdminClient();
 

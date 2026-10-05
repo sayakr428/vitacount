@@ -41,6 +41,10 @@ export function DocumentReviewModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   async function handlePostExpense() {
+    if (!(Number(amount) > 0)) {
+      setErrorMsg("Enter the receipt total (more than $0) before posting.");
+      return;
+    }
     setIsSubmitting(true);
     setErrorMsg(null);
     try {
@@ -91,7 +95,7 @@ export function DocumentReviewModal({
           <div className="flex items-center gap-2 bg-warning/15 px-6 py-2.5 text-xs text-warning border-b border-warning/30">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             <span>
-              <strong>Duplicate Receipt Detected:</strong> An existing transaction with identical vendor and exact amount was found within $\pm 3$ days. Review carefully before posting.
+              <strong>Duplicate Receipt Detected:</strong> An existing expense or bill with the exact same amount was found within 3 days of this receipt&apos;s date. Review carefully before posting.
             </span>
           </div>
         )}

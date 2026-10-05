@@ -11,27 +11,26 @@ export default async function DocumentsPage() {
 
   const supabase = await createClient();
 
-  // Fetch Documents
-  const { data: documents } = await supabase
-    .from("documents")
-    .select("*")
-    .eq("tenant_id", activeTenantId)
-    .order("created_at", { ascending: false });
-
-  // Fetch Accounts for category selection
-  const { data: accounts } = await supabase
-    .from("accounts")
-    .select("id, code, name, type")
-    .eq("tenant_id", activeTenantId)
-    .order("code", { ascending: true });
-
-  // Fetch Agent Actions for AP Bookkeeping Agent
-  const { data: agentActions } = await supabase
-    .from("agent_actions")
-    .select("*")
-    .eq("tenant_id", activeTenantId)
-    .eq("agent_name", "ap_bookkeeping_agent")
-    .order("created_at", { ascending: false });
+  const [{ data: documents }, { data: accounts }, { data: agentActions }] = await Promise.all([
+    supabase
+      .from("documents")
+      .select("*")
+      .eq("tenant_id", activeTenantId)
+      .order("created_at", { ascending: false }),
+    // Accounts for category selection
+    supabase
+      .from("accounts")
+      .select("id, code, name, type")
+      .eq("tenant_id", activeTenantId)
+      .order("code", { ascending: true }),
+    // AP Bookkeeping Agent activity
+    supabase
+      .from("agent_actions")
+      .select("*")
+      .eq("tenant_id", activeTenantId)
+      .eq("agent_name", "ap_bookkeeping_agent")
+      .order("created_at", { ascending: false }),
+  ]);
 
   return (
     <div className="space-y-6">

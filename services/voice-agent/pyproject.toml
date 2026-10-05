@@ -1,0 +1,27 @@
+[project]
+name = "vitacount-voice-agent"
+version = "0.1.0"
+description = "Vita: VitaCount's voice + chat operator (Pipecat x NVIDIA)"
+requires-python = ">=3.11"
+dependencies = [
+    "pipecat-ai[nvidia,runner,webrtc,silero]==1.12.0",
+    "python-dotenv>=1.0",
+    "loguru>=0.7",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.ruff.lint.per-file-ignores]
+# stdout is reconfigured to UTF-8 before importing pipecat (Windows consoles).
+"bot.py" = ["E402"]

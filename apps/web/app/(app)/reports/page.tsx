@@ -8,10 +8,13 @@ export default async function ReportsPage() {
     return <div className="p-8 text-center text-muted-foreground">No active workspace</div>;
   }
 
-  const pnlReport = await getProfitAndLossReport(activeTenantId);
-  const balanceSheet = await getBalanceSheetReport(activeTenantId);
-  const arAging = await getARAgingReport(activeTenantId);
-  const apAging = await getAPAgingReport(activeTenantId);
+  // Independent reports: fetch together instead of four sequential round trips.
+  const [pnlReport, balanceSheet, arAging, apAging] = await Promise.all([
+    getProfitAndLossReport(activeTenantId),
+    getBalanceSheetReport(activeTenantId),
+    getARAgingReport(activeTenantId),
+    getAPAgingReport(activeTenantId),
+  ]);
 
   return (
     <ReportsClient

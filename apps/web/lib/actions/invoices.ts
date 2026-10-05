@@ -104,6 +104,32 @@ export async function issueInvoiceAction(invoiceId: string): Promise<{ error: st
   return { error: null };
 }
 
+/**
+ * Deletes a draft invoice or debit note. Drafts have nothing posted to the
+ * books yet, so removing one is safe; issued documents are corrected with a
+ * refund or credit instead. RLS (invoices_delete) only lets owners/admins
+ * delete status = 'draft', and lines go with it (on delete cascade).
+ */
+export async function deleteDraftInvoiceAction(invoiceId: string): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("invoices")
+    .delete()
+    .eq("id", invoiceId)
+    .eq("status", "draft")
+    .select("id");
+  if (error) {
+    return { error: friendlyDbError(error) };
+  }
+  if (!data || data.length === 0) {
+    // RLS filters rather than errors: not a draft, or not an owner/admin.
+    return { error: "Only owners and admins can delete, and only drafts that haven't been sent." };
+  }
+  revalidatePath("/sales");
+  revalidatePath("/dashboard");
+  return { error: null };
+}
+
 export type RecordPaymentState = { error: string | null };
 
 export async function recordInvoicePaymentAction(

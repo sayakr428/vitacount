@@ -10,17 +10,18 @@ export default async function BankingPage() {
 
   const supabase = await createClient();
 
-  const { data: bankAccounts } = await supabase
-    .from("bank_accounts")
-    .select("*")
-    .eq("tenant_id", activeTenantId)
-    .order("created_at", { ascending: false });
-
-  const { data: bankTransactions } = await supabase
-    .from("bank_transactions")
-    .select("*")
-    .eq("tenant_id", activeTenantId)
-    .order("posted_date", { ascending: false });
+  const [{ data: bankAccounts }, { data: bankTransactions }] = await Promise.all([
+    supabase
+      .from("bank_accounts")
+      .select("*")
+      .eq("tenant_id", activeTenantId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("bank_transactions")
+      .select("*")
+      .eq("tenant_id", activeTenantId)
+      .order("posted_date", { ascending: false }),
+  ]);
 
   return (
     <BankingClient

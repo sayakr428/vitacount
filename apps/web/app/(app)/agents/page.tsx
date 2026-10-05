@@ -10,13 +10,10 @@ export default async function AgentsPage() {
   }
 
   const supabase = await createClient();
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select("settings")
-    .eq("id", activeTenantId)
-    .single();
-
-  const logs = await getAgentActionsLogAction();
+  const [{ data: tenant }, logs] = await Promise.all([
+    supabase.from("tenants").select("settings").eq("id", activeTenantId).single(),
+    getAgentActionsLogAction(),
+  ]);
 
   return <AgentsClient initialLogs={logs} tenantSettings={tenant?.settings || {}} />;
 }

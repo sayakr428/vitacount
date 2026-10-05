@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { AUTO_EXECUTE_MIN_LEVEL, getAgentAutonomyLevel } from "@/lib/agent-policy";
 
 export interface MatchCandidate {
   targetType: "invoice" | "bill" | "expense";
@@ -70,7 +71,32 @@ export async function runReconciliationAgentForTenant(tenantId: string) {
 
   let autoMatchedCount = 0;
 
+  // Below L2 (including after the kill switch) high-confidence matches go to
+  // Needs Review instead of being auto-approved.
+  const autonomyLevel = await getAgentAutonomyLevel(supabase, tenantId, "reconciliation_agent");
+  const canAutoMatch = autonomyLevel >= AUTO_EXECUTE_MIN_LEVEL;
+
+  // Every run used to append a fresh match/exception row per unmatched
+  // transaction, so Exceptions grew with each run. Load what's already there
+  // (one query) and replace the agent's own undecided rows instead.
+  const { data: priorMatches } = await supabase
+    .from("reconciliation_matches")
+    .select("id, bank_transaction_id, matched_id, status, created_by_agent, reviewed_by")
+    .eq("tenant_id", tenantId)
+    .in("bank_transaction_id", bankTxs.map((t) => t.id));
+
   for (const tx of bankTxs) {
+    const prior = (priorMatches ?? []).filter((m) => m.bank_transaction_id === tx.id);
+    if (prior.some((m) => m.status === "approved" || m.status === "auto_matched")) continue;
+    // A person already turned these candidates down — never re-propose them.
+    const rejectedByHuman = new Set(
+      prior.filter((m) => m.reviewed_by && m.status === "rejected").map((m) => m.matched_id),
+    );
+    const staleAgentRows = prior.filter((m) => m.created_by_agent && !m.reviewed_by).map((m) => m.id);
+    if (staleAgentRows.length > 0) {
+      await supabase.from("reconciliation_matches").delete().in("id", staleAgentRows);
+    }
+
     const txAmount = Math.abs(Number(tx.amount));
     const txDate = new Date(tx.posted_date);
     const txDesc = tx.description || "";
@@ -202,10 +228,10 @@ export async function runReconciliationAgentForTenant(tenantId: string) {
       }
     }
 
-    if (!bestCandidate) continue;
+    if (!bestCandidate || rejectedByHuman.has(bestCandidate.targetId)) continue;
 
     // Apply Autonomy Threshold Policy
-    if (bestCandidate.confidenceScore >= 0.95) {
+    if (bestCandidate.confidenceScore >= 0.95 && canAutoMatch) {
       // Auto-match & Auto-post immediately (L2 Autonomy)
       await supabase.from("reconciliation_matches").insert({
         tenant_id: tenantId,
@@ -236,7 +262,7 @@ export async function runReconciliationAgentForTenant(tenantId: string) {
           explanation: bestCandidate.matchSignals.explanation,
         },
         confidence_score: bestCandidate.confidenceScore,
-        autonomy_level: 2,
+        autonomy_level: autonomyLevel,
         status: "auto_executed",
       });
 

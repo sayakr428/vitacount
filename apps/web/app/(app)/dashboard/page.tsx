@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { loadTenantContext } from "@/lib/tenant/data";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/user";
 import { getDashboardFinancials, getOverdueInvoicesAlert } from "@/lib/dashboard-queries";
 import { comparisonLabel, resolveDashboardRange } from "@/lib/date-range";
 import { DashboardClient } from "./dashboard-client";
@@ -24,13 +25,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
   });
 
   const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .eq("id", userData.user!.id)
-    .single();
+  const user = await getCurrentUser();
+  // Same request-cached row the layout already fetched for the sidebar.
+  const profile = user ? await getCurrentProfile(user.id) : null;
 
   const firstName = (profile?.full_name ?? "there").split(" ")[0];
 
