@@ -7,6 +7,7 @@ dependencies = [
     "pipecat-ai[nvidia,runner,webrtc,silero]==1.12.0",
     "python-dotenv>=1.0",
     "loguru>=0.7",
+    "pipecatcloud>=1.3.0",
 ]
 
 [dependency-groups]
