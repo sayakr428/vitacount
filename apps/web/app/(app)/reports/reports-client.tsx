@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Download, FileText, Calendar, Table } from "lucide-react";
 import { downloadCSV } from "@/lib/csv-export";
+import { formatMoney } from "@/lib/money";
 import { BezelCard } from "@/components/bezel-card";
 
 interface ReportsClientProps {
@@ -151,14 +152,14 @@ export function ReportsClient({
                   {pnlReport.revenue.map((r) => (
                     <div key={r.code} className="flex justify-between border-b border-border/40 py-1 text-muted-foreground">
                       <span>{r.code} - {r.name}</span>
-                      <span className="font-mono text-foreground">${r.amount.toFixed(2)}</span>
+                      <span className="font-mono text-foreground">{formatMoney(r.amount)}</span>
                     </div>
                   ))}
                 </div>
               )}
               <div className="mt-2 flex justify-between font-bold text-foreground border-t border-border pt-1">
                 <span>Total Revenue</span>
-                <span className="font-mono text-positive">${pnlReport.totalRevenue.toFixed(2)}</span>
+                <span className="font-mono text-positive">{formatMoney(pnlReport.totalRevenue)}</span>
               </div>
             </div>
 
@@ -172,14 +173,14 @@ export function ReportsClient({
                   {pnlReport.expenses.map((e) => (
                     <div key={e.code} className="flex justify-between border-b border-border/40 py-1 text-muted-foreground">
                       <span>{e.code} - {e.name}</span>
-                      <span className="font-mono text-foreground">${e.amount.toFixed(2)}</span>
+                      <span className="font-mono text-foreground">{formatMoney(e.amount)}</span>
                     </div>
                   ))}
                 </div>
               )}
               <div className="mt-2 flex justify-between font-bold text-foreground border-t border-border pt-1">
                 <span>Total Expenses</span>
-                <span className="font-mono text-foreground">${pnlReport.totalExpenses.toFixed(2)}</span>
+                <span className="font-mono text-foreground">{formatMoney(pnlReport.totalExpenses)}</span>
               </div>
             </div>
 
@@ -187,7 +188,7 @@ export function ReportsClient({
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex justify-between text-sm font-bold">
               <span>Net Income</span>
               <span className={`font-mono ${pnlReport.netIncome >= 0 ? "text-positive" : "text-destructive"}`}>
-                ${pnlReport.netIncome.toFixed(2)}
+                {formatMoney(pnlReport.netIncome)}
               </span>
             </div>
           </div>
@@ -210,13 +211,13 @@ export function ReportsClient({
                 {balanceSheet.assets.map((a) => (
                   <div key={a.code} className="flex justify-between border-b border-border/40 py-1 text-muted-foreground">
                     <span>{a.code} - {a.name}</span>
-                    <span className="font-mono text-foreground">${a.amount.toFixed(2)}</span>
+                    <span className="font-mono text-foreground">{formatMoney(a.amount)}</span>
                   </div>
                 ))}
               </div>
               <div className="mt-2 flex justify-between font-bold text-foreground border-t border-border pt-1">
                 <span>Total Assets</span>
-                <span className="font-mono text-primary">${balanceSheet.totalAssets.toFixed(2)}</span>
+                <span className="font-mono text-primary">{formatMoney(balanceSheet.totalAssets)}</span>
               </div>
             </div>
 
@@ -227,13 +228,13 @@ export function ReportsClient({
                 {balanceSheet.liabilities.map((l) => (
                   <div key={l.code} className="flex justify-between border-b border-border/40 py-1 text-muted-foreground">
                     <span>{l.code} - {l.name}</span>
-                    <span className="font-mono text-foreground">${l.amount.toFixed(2)}</span>
+                    <span className="font-mono text-foreground">{formatMoney(l.amount)}</span>
                   </div>
                 ))}
               </div>
               <div className="mt-2 flex justify-between font-bold text-foreground border-t border-border pt-1">
                 <span>Total Liabilities</span>
-                <span className="font-mono text-warning">${balanceSheet.totalLiabilities.toFixed(2)}</span>
+                <span className="font-mono text-warning">{formatMoney(balanceSheet.totalLiabilities)}</span>
               </div>
             </div>
 
@@ -244,13 +245,13 @@ export function ReportsClient({
                 {balanceSheet.equity.map((eq) => (
                   <div key={eq.code} className="flex justify-between border-b border-border/40 py-1 text-muted-foreground">
                     <span>{eq.code} - {eq.name}</span>
-                    <span className="font-mono text-foreground">${eq.amount.toFixed(2)}</span>
+                    <span className="font-mono text-foreground">{formatMoney(eq.amount)}</span>
                   </div>
                 ))}
               </div>
               <div className="mt-2 flex justify-between font-bold text-foreground border-t border-border pt-1">
                 <span>Total Equity</span>
-                <span className="font-mono text-foreground">${balanceSheet.totalEquity.toFixed(2)}</span>
+                <span className="font-mono text-foreground">{formatMoney(balanceSheet.totalEquity)}</span>
               </div>
             </div>
           </div>
@@ -278,7 +279,7 @@ export function ReportsClient({
                 <div key={idx} className="rounded-xl border border-border/60 p-4">
                   <div className="flex justify-between font-semibold text-foreground mb-2">
                     <span>{bracket.label} ({bracket.items.length} invoices)</span>
-                    <span className="font-mono">${total.toFixed(2)}</span>
+                    <span className="font-mono">{formatMoney(total)}</span>
                   </div>
                   {bracket.items.length === 0 ? (
                     <p className="text-muted-foreground">None</p>
@@ -287,7 +288,7 @@ export function ReportsClient({
                       {bracket.items.map((inv) => (
                         <div key={inv.id} className="flex justify-between text-xs">
                           <span>Invoice #{inv.invoice_number} ({inv.customer?.display_name || "Customer"})</span>
-                          <span className="font-mono text-foreground">${Number(inv.balance_due || inv.total).toFixed(2)}</span>
+                          <span className="font-mono text-foreground">{formatMoney(Number(inv.balance_due || inv.total))}</span>
                         </div>
                       ))}
                     </div>
@@ -320,7 +321,7 @@ export function ReportsClient({
                 <div key={idx} className="rounded-xl border border-border/60 p-4">
                   <div className="flex justify-between font-semibold text-foreground mb-2">
                     <span>{bracket.label} ({bracket.items.length} bills)</span>
-                    <span className="font-mono">${total.toFixed(2)}</span>
+                    <span className="font-mono">{formatMoney(total)}</span>
                   </div>
                   {bracket.items.length === 0 ? (
                     <p className="text-muted-foreground">None</p>
@@ -329,7 +330,7 @@ export function ReportsClient({
                       {bracket.items.map((bill) => (
                         <div key={bill.id} className="flex justify-between text-xs">
                           <span>Bill #{bill.bill_number} ({bill.vendor?.display_name || "Vendor"})</span>
-                          <span className="font-mono text-foreground">${Number(bill.balance_due || bill.total).toFixed(2)}</span>
+                          <span className="font-mono text-foreground">{formatMoney(Number(bill.balance_due || bill.total))}</span>
                         </div>
                       ))}
                     </div>

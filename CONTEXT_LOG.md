@@ -436,3 +436,175 @@ These tests used `tenants`/`accounts`/`journal_entries` directly (not `auth.user
 - `supabase/schema_all_migrations.sql` is stale — it predates the RLS-bypass fix and the security sweep, so bootstrapping a database from it reintroduces both issues. Left untouched rather than appending to it; apply `supabase/migrations/*` in order instead.
 - Dashboard aggregation happens in the app over paged ledger lines — fine at SMB volume; move it into a SQL function if tenants reach hundreds of thousands of lines.
 
+### Supabase reconnect, security fixes, NVIDIA OCR, agent-policy enforcement + Vita Phases 0–2 (2026-10-05)
+
+**Why:** connect the local app to the Supabase project, fix harmful bugs found on the way, swap receipt OCR to the NVIDIA key (no Anthropic key available), and start the Vita voice/chat operator (Pipecat × NVIDIA) from the client's spec — after checking the spec against this codebase and Pipecat's real API. Corrections to the spec are recorded below because later phases build on them.
+
+**Security / correctness fixes (existing code, smallest possible changes):**
+1. `uploadDocumentAction` uploaded with the service-role client, created the `receipts` bucket as **public** (receipts readable by URL across tenants), and retried a rejected `documents` insert with the admin client (bypassing the RLS that refused it). Now uses the user's session only. Migration `20261005000000_receipts_bucket_private.sql` makes the bucket private — **written but NOT applied** (the live-DB write was blocked in-session; run it in the SQL editor).
+2. `/auth/callback` open redirect: `next=@evil.com` produced `https://site@evil.com`. Only same-origin paths are accepted now.
+3. The auth proxy redirected `/api/webhooks/*` to `/login`, so Stripe `checkout.session.completed` never reached the app (online invoice payments were never recorded). Webhooks are now public paths; Stripe still verifies its signature.
+4. The Plaid webhook was unauthenticated and triggered a paid AI agent run; it now returns 501 until Plaid is configured (Plaid-Verification JWT checking is still TODO before real Plaid).
+5. **Kill switch and autonomy levels were cosmetic** — no agent read `tenants.settings.agent_policies`; all were hard-coded to L2. New `lib/agent-policy.ts`; the AP, reconciliation and AR agents now auto-execute only at level ≥ 2 (failing closed to 0 if settings can't be read). Below L2: AP leaves documents in review, reconciliation sends ≥0.95 matches to Needs Review, AR schedules (doesn't send) reminders and logs `proposed`. The default (no policy saved) is unchanged at L2.
+6. Mock OCR (used when extraction fails) returned confidence 0.92 — above the 0.90 auto-post bar — so a failed read posted a fake $149.50 "Acme Supplies Corp" expense. Mock confidence is now 0.50 (goes to review).
+7. The AP agent wrote `documents.status = 'needs_review'`, which the check constraint rejects; the unchecked update silently lost OCR results. Now `'extracted'` (the Documents page's review state).
+
+**NVIDIA OCR:** new `lib/ocr-nvidia.ts` (OpenAI-compatible NIM, default `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning`, overridable via `NVIDIA_VLM_MODEL`), selected in `ocr.ts` by one guarded branch only when `ANTHROPIC_API_KEY` is empty. PDFs: `lib/pdf-to-images.ts` renders up to 3 pages with `pdfjs-dist` 6 + `@napi-rs/canvas` and sends them in one request. Both packages are in `serverExternalPackages`; pdf.js fonts/worker are added via `outputFileTracingIncludes` for `/documents` (confirmed in the `.nft.json` trace). Money strings like `"$768.90"` are coerced. Model bake-off on a synthetic receipt: nemotron-omni got all fields correct (~8–38s); llama-3.2-90b was correct but took ~143s; llama-3.2-11b missed the vendor and the date format. Note: the existing Claude path still calls the retired `claude-3-5-sonnet-20241022`.
+
+**Spec check (before building Vita) — corrections:**
+- Lint baseline is 73 errors + 27 warnings (not 77).
+- There is no `audit_log` table, so log to `agent_actions` only.
+- Reconciliation has `needs_review` but no `exception` status.
+- Roles also include `accountant`.
+- `set_agent_autonomy_level` and `emergency_kill_switch` take `p_tenant_id`.
+- Pipecat 1.12.0 has everything the spec names. Real paths: `pipecat.workers.ui.{UIWorker, screen_tools}`, `pipecat.workers.llm.{LLMWorker, LLMWorkerActivationArgs}`, `pipecat.workers.runner.WorkerRunner`; the in-process bus is `pipecat.bus.AsyncQueueBus`. `job_group` and `activate_worker` are worker methods.
+- The fill command is `set_input_value`, and it does **not** update React controlled inputs (needs the native-setter fix in Phase 3).
+- client-js has no `onUICommand` (use `client.on(RTVIEvent.UICommand)`) and no interrupt call.
+- `pipecat.flows` is built in; don't install `pipecat-ai-flows`.
+- **The runner drops camelCase `requestData` on direct `/api/offer`.** Custom data only reaches `bot()` via `/start` → `/sessions/{id}/api/offer`, i.e. client-js `startBotAndConnect`.
+- LLM choice: `nemotron-3.5-lightning` reasons through its whole token budget (12s replies) and garbles its output with reasoning off, so it was rejected. `nemotron-3-super` with `chat_template_kwargs.enable_thinking=false` gives ~0.5s to first token with correct tool calls.
+
+**Built — Vita Phases 1–2:**
+- **`services/voice-agent/`** (outside the pnpm globs; uv, Python 3.11, `pipecat-ai[nvidia,runner,webrtc,silero]==1.12.0`):
+  - `bot.py`: NVIDIA STT → nemotron-3-super → NVIDIA Magpie TTS, Silero VAD, interruptions. Tools `get_current_page` and `navigate` (an enum of known routes, sent to the client as an RTVI server message). Client messages `page` (route changes) and `stop` (Esc → `interrupt_bot`).
+  - `vita/session.py` verifies the HMAC token (constant-time comparison, expiry with 30s skew) and drops the WebRTC connection when it's invalid.
+  - `vita/app_map.py` describes every page for guidance; `vita/prompts.py` follows spec §11, scoped to what Phase 2 can actually do.
+  - Windows: stdout is reconfigured to UTF-8 (the runner banner crashed cp1252 consoles). uv-managed Python is blocked by App Control here, so the README documents `UV_PYTHON_PREFERENCE=only-system`.
+- **Web:**
+  - `POST /api/agent/session` (signed-in user + active tenant → 15-min HMAC token; 404 when the flag is off, 503 when unconfigured), backed by `lib/agent-session.ts`.
+  - `components/agent/{use-vita.ts, vita-dock.tsx, vita-dock-loader.tsx}`.
+  - `components/ui/robot-mascot.tsx` (three + @react-three/fiber 9), from the client's robot-hero design. The pasted source was truncated by the message limit, so the body ring, neck and head assembly were rebuilt. drei, framer-motion and react-icons weren't needed, and there's no CDN HDR environment.
+  - Dock: a bottom-right robot orb that follows the pointer page-wide and shows offline/connecting/listening/thinking/speaking states. The panel has a transcript, typed chat, mic toggle, speaker toggle, Stop, suggestions and a "Vita is offline" state. `Ctrl+Space` tap toggles the dock, holding it is push-to-talk, and `Esc` stops Vita, then closes the dock; closing disconnects.
+  - Mounted in `app/(app)/layout.tsx` behind `NEXT_PUBLIC_AGENT_ENABLED`, with the flag check around the dynamic `import()` so the chunk isn't even emitted when the flag is off.
+
+**Verified:**
+- `tsc` clean; `pnpm build` exit 0; `pnpm lint` 73 errors / 27 warnings (unchanged); `ruff` clean; pytest 11/11 (token signing/verification incl. forged, tampered, expired and missing-secret cases).
+- Flag off → 0 client-bundle files contain pipecat/three/dock code (1.6 MB). Flag on → 2.9 MB with the split chunk.
+- Headless aiortc client against the bot: a forged token was rejected ("bad signature"). A valid token got a greeting, tool calls → `navigate` to `/sales/new?type=invoice` and `/agents`, real TTS audio frames, and ~0.6s to first LLM token.
+- Playwright + Chromium via a temporary `app/vita-preview` route (session route stubbed with a locally signed token; the route and proxy exemption were removed afterwards): the hotkey opens the dock, which connects, greets and answers typed questions correctly. Esc stops speech, then closes. "Take me to my reports" navigates. The offline state shows on a 503. Zero console errors; hi-res mascot screenshots checked.
+- Push-to-talk with a synthesized WAV as the fake mic: NVIDIA STT transcribed "Please take me to the documents page", and the app navigated to `/documents`.
+
+**Not done / deferred:**
+- Not exercised as a real signed-in user (no test login in-session). Open the app with the flag on and try voice + chat once; the session route's auth path is covered only by the signed-out 307 check.
+- Phases 3–7:
+  - Phase 3: UIWorker clicky mode, ghost cursor, confirmation chip, controlled-input fix.
+  - Phase 4: tool registry and gateway (token-scoped client, role checks, `agent_actions` logging, rate limits).
+  - Phase 5: specialist workers, fan-out scanners, DocumentReader.
+  - Phase 6: business flows.
+  - Phase 7: Docker, production transport (Daily/TURN), health endpoint.
+- The session token only gates session start; a session can outlive the 15-min expiry until disconnect. Revisit when Phase 4 adds bearer-token refresh.
+- Receipt reading takes 20–40s inside the upload request; move OCR to background processing.
+- The AP agent still auto-posts clear receipts at L2, while `project.md` says AP should be L1 (always human verify). That's a product decision, left as-is.
+
+### Full click-through QA, performance pass, Delete draft (2026-10-05)
+
+**Why:** client asked for every feature to be exercised end-to-end (hover every page, create and delete dummy invoices, etc.) and for the general slowness — suspected of hurting the agent — to be fixed.
+
+**QA setup:** user-approved test account `vita.qa.tester@example.com` (signed up through Supabase Auth, email confirmed directly in `auth.users` with approval, since `mailer_autoconfirm` is off), onboarded through the real UI into its own **"Vita QA"** workspace — all dummy data lives there, isolated by RLS. Driven with Playwright + Chromium against the dev server and the live Supabase project.
+
+**Performance (root cause + fixes):** every Supabase round trip costs ~300ms from here (project in ca-central-1), and each page made 4–6 of them in sequence. The auth proxy and the layout each called `auth.getUser()`, a network call to the Auth server on every request.
+- `lib/supabase/middleware.ts` now uses `auth.getClaims()`. The project signs JWTs with ES256, so verification is local against the JWKS, which auth-js caches in a module-global.
+- New `lib/supabase/user.ts`: `getCurrentUser()` (getClaims) and `getCurrentProfile()`, both wrapped in React `cache()`.
+- `getUserMemberships`/`loadTenantContext` are `cache()`d, so the layout, the page and the server actions it calls share one query per request.
+- The layout fetches tenant + profile in parallel.
+- Independent queries now run in `Promise.all` on: reports (4 reports), sales, documents, reconciliation, agents, banking, and the AR risk scores.
+
+Warm TTFB, signed in:
+
+| Measurement | Before | After |
+|---|---|---|
+| Median (dev) | 1,344ms | 698ms |
+| Static "coming soon" pages | ~1,350ms | ~385ms |
+| Median (production build, `next start`) | — | 669ms (max 989ms) |
+
+The remainder is ~2 sequential round trips of network latency. Deploying the app in the same region as the database (e.g. Vercel near ca-central-1) removes most of it. The voice agent itself was not slowed by this: it talks to NVIDIA directly (~0.6–0.8s to first reply text). Its perceived lag was the ~4.5s WebRTC connect, addressed below.
+
+**Delete draft (new feature):** `deleteDraftInvoiceAction` + `components/delete-draft-button.tsx` (confirm step) on draft invoices and debit notes, relying on the existing `invoices_delete` RLS (owner/admin, `status = 'draft'`; lines cascade). Issued documents and bills stay undeletable — bills post to the GL on creation, so deleting one would orphan journal entries.
+
+**Bugs found by the click-through and fixed:**
+1. **Stripe "Pay with card" crashed the whole invoice page (500)** when `STRIPE_SECRET_KEY` was unset — `getStripeClient()` threw inside the action. Now returns a friendly message; Stripe API errors are caught too.
+2. **Reconciliation agent duplicated rows on every run** (Exceptions 3 → 9 → 13). It now loads prior matches in one query, skips approved/auto-matched transactions, replaces its own undecided rows, and never re-proposes a candidate a person rejected (`reviewed_by` set). Verified: counts stable across runs (13 duplicates collapsed to 4), approve → matched, reject → not re-proposed.
+3. **Team invite crashed the Team page** without `SUPABASE_SERVICE_ROLE_KEY`: the route threw (empty 500) and the form's `res.json()` threw inside a transition. The route returns a 503 JSON message; the form tolerates a non-JSON body.
+4. **Verify & post on a document with no amount** (e.g. opened while still being read) reached the DB and showed a raw "violates check constraint expenses_amount_check". Now validated in the modal and the action.
+5. **NVIDIA OCR had no handling for its free-tier "503 ResourceExhausted (16/16)"**, so everything fell back to placeholder data during busy periods. `ocr-nvidia.ts` now retries busy responses (1.5s, 4s), then falls back to `meta/llama-3.2-11b-vision-instruct` (`NVIDIA_VLM_FALLBACK_MODEL`), and normalizes `MM/DD/YYYY` dates.
+6. **Phone width:** every (app) page was ~1,044px wide at 390px (the flex column's `min-width:auto` grew to the module-tab row). `min-w-0` on the column; all 18 pages now fit.
+7. Connect-bank modal: labels weren't associated with inputs, and it had no dialog role or close label (inaccessible, and un-targetable for Vita's future form filling). Fixed.
+8. Literal LaTeX in the UI ("$\ge 95\%$", "$\pm 3$ days"). Replaced; the duplicate warning now states the real rule (same amount within 3 days — the check is amount-only).
+9. Reports printed `$1720.00` (no thousands separator, unlike the rest of the app). On-screen amounts use `formatMoney`; the CSV keeps plain numbers.
+
+**Vita improvements:** the dock accepts typing immediately while the WebRTC handshake runs (messages queue, then send on ready — including during the session-token fetch). The bot skips its greeting when a question is already queued (`greet` flag), which removed a doubled "Welcome to VitaCount". A quick double-Esc always closes the dock.
+
+**Verified (74/74 checks):**
+- **Navigation:** all 26 pages load; all 23 sidebar items and module tabs hovered; zero console errors or 5xx after fixes (the only console notice is next-themes' known dev-only "script tag" warning).
+- **Sales:**
+  - Contacts (customer + vendor).
+  - Invoice with tax: live total $1,650.00, Net 30 → due 2026-11-04, preview, save draft.
+  - Delete a second draft; its URL then 404s.
+  - Issue; the Delete button disappears once issued.
+  - Partial payment ($650); lump-sum $1,200 → invoice paid + $200 customer credit.
+  - Sales receipt; debit note draft → send; refund (returned items); refund-of-credit mode finds the $200.
+  - Stripe message.
+- **Purchases:** bill (Net 15); expense; supplier credit; apply credit → $200 owed; Pay all → bill Paid.
+- **Banking:** connect sandbox account; sync; reconciliation run / approve / reject / no duplicates.
+- **Documents:**
+  - Image receipt read by NVIDIA (Office Depot $92.53) and held for review at AP L1.
+  - Review modal → verify & post creates the expense.
+  - Two-page PDF read (Northwind $768.90 from page 2).
+  - Re-uploaded receipt flagged duplicate and not posted (checked in the DB).
+- **Agents:** AP L1/L2 switching; kill switch → all L0; restored.
+- **Reports:** P&L revenue $1,720.00 / expenses $810.73 / net $909.27 (matches hand-computed totals), AR aging shows the open $50 debit note, balance sheet, CSV export.
+- **Dashboard and feed:** range filter (`range=this_year`), compare toggle, table view; transactions feed.
+- **CPA:** add account 6999, balanced journal entry (Post enabled only when balanced) posts and lists.
+- **Team and AR:** team invite message; AR collections run.
+- **Header:** dark theme, New menu, Owner/CPA mode; Print/PDF opens the print dialog; every sales/expense detail page opens; phone width.
+- **Vita, signed in for real:**
+  - Real session token, answer in 0.8s, and navigation to `/sales/receive-payment` while the dock stays connected.
+  - Push-to-talk (synthesized WAV as mic) → "documents page" → `/documents`.
+  - Type-ahead during connect answered; Esc behaviour.
+- **Build:** `tsc` clean; `pnpm build` exit 0; lint 73 errors / 27 warnings (baseline).
+
+**Not done / deferred:**
+- The QA account and its "Vita QA" workspace (contacts, invoices, bills, expenses, bank lines, documents, a journal entry) remain in the live project for re-testing — delete the user in Supabase Auth to remove it (workspace rows cascade from the tenant only if deleted too).
+- The documents list doesn't show a "duplicate" badge (only the review modal does); the agent activity log is empty unless an agent auto-executes (by design — consider logging L1 proposals).
+- All test expenses landed in "5000 Cost of Goods Sold" because the tests picked the first category; category choice itself isn't a bug.
+- Remaining latency is network distance to ca-central-1; co-locate the deployment with the database.
+- Tenant switcher not exercised (the QA user has one workspace).
+
+### Vita Phase 3 — on-screen operator: fills forms, clicks, asks before posting (2026-10-05)
+
+**Why:** client feedback — Vita answered "I can't fill in forms yet" to "add a new customer with dummy details". It must operate the app itself.
+
+**Built (bot, `services/voice-agent/`):**
+- **Element lookup:** Pipecat `UIWorker` subclass `vita/ui_worker.py` (`VitaUIWorker`) plus `screen_tools("ui")`, and a new `fill_form(fields)` tool that fills many fields in one call.
+  - **Instant label matching (`vita/ui_match.py`).** The stock worker sends every lookup and the whole page snapshot to an LLM, ~4.3s per field. Literal labels now resolve in microseconds, aware of the action (a fill prefers inputs over table headers, a click prefers buttons). Vague or ambiguous targets still fall back to the classifier.
+  - **Truthful results.** Stock `screen` returned `done` as soon as a command was *sent*, so the model claimed "I filled…" / "saved" when nothing happened (observed: no fill calls at all; "100 dollars" rejected by a number input; Save blocked by validation). Each command now waits for the dock's `command_result` event: the value now in the field; after a click the URL, page alerts and still-invalid fields; Cancel or forbidden outcomes. That is returned as the tool result.
+  - **Forbidden targets refused before lookup.** Delete, kill switch, autonomy levels, invites, sign-out, workspace switching (`is_forbidden_target`).
+- **`vita/nudge.py`:** nemotron-3-super often ends a reply with "Let me fill the name field." and no tool call, or claims actions it never made a tool call for. The bot detects both — announcements per LLM response, claims against all tool calls since the user's last message (typed or spoken) — and nudges the model to act (max 4 per user message).
+- **`navigate`** waits for the new page's snapshot before returning, so fills never target the previous page.
+- **Prompt:** act-don't-announce, one `fill_form` call, ask "Shall I save it?" before any save, dummy data only when asked for, plain-digit numbers, report only what results confirm, and the never-do list. Literal braces in the prompt must be doubled (`str.format`) — a test now builds the prompt for every role and mode.
+
+**Built (web, `apps/web/components/agent/`):**
+- **`use-vita.ts`:** page snapshot stream while the dock is connected.
+  - Snapshots are filtered just before sending: anything inside `[data-vita-dock]` or `[data-agent-private]` is removed. client-js has no exclude option, and `aria-hidden` would hide the dock from screen readers; password values are never included by client-js.
+  - Forwards UI commands; sends `command_result` events.
+- **`ui-actions.ts`:**
+  - React-safe value setting (native prototype setter + `input`/`change`, so controlled forms and totals update), dropdown option matching by visible text, numeric sanitising for `type=number`.
+  - `FORBIDDEN` and `CONSEQUENTIAL` click rules, and post-click page feedback.
+- **`ghost-cursor.tsx`:** a Vita-blue pointer that glides to each target with a caption ("Typing Jordan Sample", "Clicking Send invoice") and ripples on click; it jumps instead under `prefers-reduced-motion`.
+- **`vita-dock.tsx`:**
+  - Ordered command queue; a "Vita is working on the page — Stop (Esc)" banner; Esc cancels queued actions.
+  - An **Allow/Cancel chip** before any ledger-changing click (send invoice, record payment, record bill or expense, pay, post entry, save sales receipt or refund, approve/reject, verify, sync/run agents). A spoken yes/no also answers it.
+  - Suggestions now include "Add a customer with dummy details".
+
+**Verified (real signed-in browser session against the live QA workspace, 8/8):**
+- Chat "Add a new customer with a dummy name, dummy email and dummy phone number" → Vita navigates to /contacts, fills Name/Email/Phone in one `fill_form`, asks "Shall I save it?", clicks Add contact on "yes", and the contact row appears.
+- Invoice for that customer (Customer, Net 30, line description, qty 3, unit price 100) → total shows $300.00 → saved as draft on "yes".
+- "Send the invoice" → Allow chip → Allow → invoice sent.
+- "Delete that invoice" → refused ("I cannot delete anything").
+- Bot log error-free; ruff clean; pytest 23/23; web `tsc` clean; lint at baseline (73 errors / 27 warnings); `pnpm build` exit 0 with the flag on.
+
+**Not done / deferred:**
+- Spoken narration can still include a stray "Now I'll…" sentence before a refusal or a tool call — cosmetic.
+- Phases 4–7 remain: headless read tools and gateway (live numbers like "who owes me money?"), specialist workers, guided flows, deployment.
+- The QA workspace now holds several "Jordan Sample" contacts and test invoices from these runs.
+

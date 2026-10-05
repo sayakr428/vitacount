@@ -32,27 +32,37 @@ export async function createInvoiceCheckoutSessionAction(
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-  const stripe = getStripeClient();
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: [
-      {
-        price_data: {
-          currency: invoice.currency.toLowerCase(),
-          unit_amount: Math.round(invoice.balance_due * 100),
-          product_data: { name: `Invoice ${invoice.invoice_number}` },
+  if (!process.env.STRIPE_SECRET_KEY) {
+    // getStripeClient() throws here, which surfaced as a full-page 500.
+    return { error: "Online card payments aren't set up yet — add your Stripe keys to enable them.", url: null };
+  }
+
+  let session;
+  try {
+    session = await getStripeClient().checkout.sessions.create({
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: invoice.currency.toLowerCase(),
+            unit_amount: Math.round(invoice.balance_due * 100),
+            product_data: { name: `Invoice ${invoice.invoice_number}` },
+          },
+          quantity: 1,
         },
-        quantity: 1,
+      ],
+      metadata: {
+        invoiceId: invoice.id,
+        tenantId: invoice.tenant_id,
+        contactId: invoice.contact_id,
       },
-    ],
-    metadata: {
-      invoiceId: invoice.id,
-      tenantId: invoice.tenant_id,
-      contactId: invoice.contact_id,
-    },
-    success_url: `${siteUrl}/sales/${invoice.id}?paid=1`,
-    cancel_url: `${siteUrl}/sales/${invoice.id}`,
-  });
+      success_url: `${siteUrl}/sales/${invoice.id}?paid=1`,
+      cancel_url: `${siteUrl}/sales/${invoice.id}`,
+    });
+  } catch (err) {
+    console.error("Stripe checkout session failed", err);
+    return { error: "Couldn't create a Stripe payment link. Please try again.", url: null };
+  }
 
   if (!session.url) {
     return { error: "Stripe did not return a checkout URL.", url: null };

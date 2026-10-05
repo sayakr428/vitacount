@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runReconciliationAgentForTenant } from "@/lib/reconciliation-agent";
+import { getPlaidConfig } from "@/lib/plaid";
 
 export async function POST(request: Request) {
+  // This endpoint is unauthenticated and triggers a paid AI agent run. Until
+  // Plaid-Verification JWT checking is implemented alongside the real Plaid
+  // integration, refuse to act on anything.
+  if (!getPlaidConfig()) {
+    return NextResponse.json({ error: "Plaid not configured." }, { status: 501 });
+  }
+
   try {
     const body = await request.json();
     const { webhook_type, webhook_code, item_id } = body;

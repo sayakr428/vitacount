@@ -35,14 +35,15 @@ export function ConnectBankModal({ onClose }: ConnectBankModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+      <div role="dialog" aria-modal="true" aria-labelledby="connect-bank-title" className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
         <div className="flex items-center justify-between border-b border-border bg-muted/30 px-6 py-4">
           <div className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-primary" />
-            <h2 className="text-sm font-semibold text-foreground">Connect Bank Account (Plaid Sandbox)</h2>
+            <h2 id="connect-bank-title" className="text-sm font-semibold text-foreground">Connect Bank Account (Plaid Sandbox)</h2>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <X className="h-4 w-4" />
@@ -51,8 +52,9 @@ export function ConnectBankModal({ onClose }: ConnectBankModalProps) {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-foreground">Account Nickname</label>
+            <label htmlFor="bank-nickname" className="mb-1 block text-xs font-medium text-foreground">Account Nickname</label>
             <input
+              id="bank-nickname"
               type="text"
               required
               value={name}
@@ -63,8 +65,9 @@ export function ConnectBankModal({ onClose }: ConnectBankModalProps) {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-foreground">Financial Institution</label>
+            <label htmlFor="bank-institution" className="mb-1 block text-xs font-medium text-foreground">Financial Institution</label>
             <input
+              id="bank-institution"
               type="text"
               required
               value={institutionName}
@@ -74,8 +77,9 @@ export function ConnectBankModal({ onClose }: ConnectBankModalProps) {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-foreground">Account Type</label>
+            <label htmlFor="bank-account-type" className="mb-1 block text-xs font-medium text-foreground">Account Type</label>
             <select
+              id="bank-account-type"
               value={accountType}
               onChange={(e) => setAccountType(e.target.value)}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-hidden"

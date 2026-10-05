@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadTenantContext } from "@/lib/tenant/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { IssueInvoiceButton } from "@/components/issue-invoice-button";
+import { DeleteDraftButton } from "@/components/delete-draft-button";
 import { RecordInvoicePaymentForm } from "@/components/record-invoice-payment-form";
 import { CreateStripeLinkButton } from "@/components/create-stripe-link-button";
 import { DocumentPrintActions } from "@/components/document-preview";
@@ -186,7 +187,10 @@ export default async function SalesDocumentPage({
             <p className="text-sm text-muted-foreground">
               This {config.label.toLowerCase()} hasn&apos;t been sent yet — nothing has been posted to your books.
             </p>
-            <IssueInvoiceButton invoiceId={invoice.id} label={documentType === "debit_note" ? "Send debit note" : "Send invoice"} />
+            <div className="flex flex-wrap items-start gap-2">
+              <DeleteDraftButton invoiceId={invoice.id} label={config.label.toLowerCase()} />
+              <IssueInvoiceButton invoiceId={invoice.id} label={documentType === "debit_note" ? "Send debit note" : "Send invoice"} />
+            </div>
           </CardContent>
         </Card>
       )}

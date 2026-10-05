@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
@@ -16,7 +17,9 @@ export type MembershipSummary = {
   tenant: TenantSummary | null;
 };
 
-export async function getUserMemberships(): Promise<MembershipSummary[]> {
+// cache(): the layout, the page and the server actions it calls all ask for
+// this; one memberships query per request instead of several.
+export const getUserMemberships = cache(async (): Promise<MembershipSummary[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("memberships")
@@ -28,7 +31,7 @@ export async function getUserMemberships(): Promise<MembershipSummary[]> {
   }
 
   return data ?? [];
-}
+});
 
 export async function getActiveTenantId(
   memberships: MembershipSummary[],
@@ -43,7 +46,7 @@ export async function getActiveTenantId(
   return memberships[0]?.tenant_id ?? null;
 }
 
-export async function loadTenantContext() {
+export const loadTenantContext = cache(async () => {
   const memberships = await getUserMemberships();
   const activeTenantId = await getActiveTenantId(memberships);
   const active = memberships.find((m) => m.tenant_id === activeTenantId) ?? null;
@@ -54,4 +57,4 @@ export async function loadTenantContext() {
     activeTenant: active?.tenant ?? null,
     role: active?.role ?? null,
   };
-}
+});

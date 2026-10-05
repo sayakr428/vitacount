@@ -2,7 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/database.types";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/reset-password", "/auth/callback"];
+// /api/webhooks/* has no user session — each handler authenticates its caller
+// itself (Stripe signature check; Plaid is refused until verification exists).
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/reset-password",
+  "/auth/callback",
+  "/api/webhooks",
+];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(
@@ -34,9 +42,11 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() verifies the JWT locally against the project's cached ES256
+  // JWKS (refreshing the session first if it's about to expire) instead of
+  // calling the Auth server on every request like getUser() did (~300ms+ each).
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const user = claimsData?.claims?.sub ? claimsData.claims : null;
 
   const { pathname, search } = request.nextUrl;
 

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { AUTO_EXECUTE_MIN_LEVEL, getAgentAutonomyLevel } from "@/lib/agent-policy";
 
 export interface CustomerRiskMetric {
   customerId: string;
@@ -14,16 +15,17 @@ export interface CustomerRiskMetric {
 export async function calculateCustomerRiskScores(tenantId: string): Promise<Record<string, CustomerRiskMetric>> {
   const supabase = await createClient();
 
-  const { data: invoices } = await supabase
-    .from("invoices")
-    .select("id, contact_id, issue_date, due_date, status, customer:contacts(display_name)")
-    .eq("tenant_id", tenantId)
-    .in("document_type", ["invoice", "debit_note"]);
-
-  const { data: payments } = await supabase
-    .from("payments_received")
-    .select("id, contact_id, payment_date")
-    .eq("tenant_id", tenantId);
+  const [{ data: invoices }, { data: payments }] = await Promise.all([
+    supabase
+      .from("invoices")
+      .select("id, contact_id, issue_date, due_date, status, customer:contacts(display_name)")
+      .eq("tenant_id", tenantId)
+      .in("document_type", ["invoice", "debit_note"]),
+    supabase
+      .from("payments_received")
+      .select("id, contact_id, payment_date")
+      .eq("tenant_id", tenantId),
+  ]);
 
   const customerDelays: Record<string, { name: string; delays: number[] }> = {};
 
@@ -102,6 +104,10 @@ export async function runARCollectionsAgent(tenantId: string) {
   }
 
   let scheduledCount = 0;
+  // Below L2 (including after the kill switch) reminders are only scheduled
+  // and proposed for review — nothing is sent to a customer.
+  const autonomyLevel = await getAgentAutonomyLevel(supabase, tenantId, "ar_collections_agent");
+  const canAutoSend = autonomyLevel >= AUTO_EXECUTE_MIN_LEVEL;
 
   for (const inv of overdueInvoices) {
     if (!inv.contact_id || !inv.due_date) continue;
@@ -150,8 +156,8 @@ export async function runARCollectionsAgent(tenantId: string) {
           customer_id: inv.contact_id,
           step,
           scheduled_for: todayStr,
-          status: "sent",
-          sent_at: new Date().toISOString(),
+          status: canAutoSend ? "sent" : "scheduled",
+          sent_at: canAutoSend ? new Date().toISOString() : null,
           template_used: template,
           stripe_payment_url: stripePaymentUrl,
         })
@@ -178,8 +184,8 @@ export async function runARCollectionsAgent(tenantId: string) {
             balance_due: inv.balance_due || inv.total,
           },
           confidence_score: 0.98,
-          autonomy_level: 2,
-          status: "auto_executed",
+          autonomy_level: autonomyLevel,
+          status: canAutoSend ? "auto_executed" : "proposed",
         });
 
         scheduledCount++;

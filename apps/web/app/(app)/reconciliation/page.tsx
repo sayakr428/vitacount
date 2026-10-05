@@ -10,20 +10,21 @@ export default async function ReconciliationPage() {
 
   const supabase = await createClient();
 
-  // Fetch reconciliation matches with linked bank transaction data
-  const { data: matches } = await supabase
-    .from("reconciliation_matches")
-    .select("*, bank_transaction:bank_transactions(*)")
-    .eq("tenant_id", activeTenantId)
-    .order("created_at", { ascending: false });
-
-  // Fetch unmatched bank transactions
-  const { data: unmatchedTx } = await supabase
-    .from("bank_transactions")
-    .select("*")
-    .eq("tenant_id", activeTenantId)
-    .eq("status", "unmatched")
-    .order("posted_date", { ascending: false });
+  const [{ data: matches }, { data: unmatchedTx }] = await Promise.all([
+    // Reconciliation matches with linked bank transaction data
+    supabase
+      .from("reconciliation_matches")
+      .select("*, bank_transaction:bank_transactions(*)")
+      .eq("tenant_id", activeTenantId)
+      .order("created_at", { ascending: false }),
+    // Unmatched bank transactions
+    supabase
+      .from("bank_transactions")
+      .select("*")
+      .eq("tenant_id", activeTenantId)
+      .eq("status", "unmatched")
+      .order("posted_date", { ascending: false }),
+  ]);
 
   return (
     <ReconciliationClient

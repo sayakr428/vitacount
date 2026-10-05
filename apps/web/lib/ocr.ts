@@ -99,6 +99,15 @@ Return ONLY valid JSON matching this schema:
     }
   }
 
+  const nvidiaKey = process.env.NVIDIA_API_KEY;
+  if (!apiKey && nvidiaKey) {
+    const { extractReceiptDataWithNvidia } = await import("@/lib/ocr-nvidia");
+    const extracted = await extractReceiptDataWithNvidia(fileBuffer, mimeType, nvidiaKey);
+    if (extracted) {
+      return extracted;
+    }
+  }
+
   // Fallback heuristic mock parser for testing/dev environments
   const cleanName = fileName.replace(/[^a-zA-Z0-9]/g, " ").trim();
   const today = new Date().toISOString().slice(0, 10);
@@ -131,6 +140,8 @@ Return ONLY valid JSON matching this schema:
       { description: `${categorySuggestion} Item`, amount: Math.round(totalAmount * 0.92 * 100) / 100 },
       { description: "Sales Tax", amount: Math.round(totalAmount * 0.08 * 100) / 100 },
     ],
-    confidenceScore: 0.92,
+    // Invented data must never clear the AP agent's 0.90 auto-post bar — it
+    // goes to the review queue for a human to correct instead.
+    confidenceScore: 0.5,
   };
 }

@@ -25,38 +25,21 @@ export async function uploadDocumentAction(formData: FormData) {
   const fileExt = file.name.split(".").pop() || "png";
   const storagePath = `${activeTenantId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-  // 1. Upload file to Supabase Storage using Admin client to ensure bucket creation & bypass storage RLS
-  let uploadError: any = null;
-  try {
-    const { createAdminClient } = await import("@/lib/supabase/admin");
-    const adminSupabase = createAdminClient();
-    
-    // Ensure bucket exists
-    await adminSupabase.storage.createBucket("receipts", { public: true }).catch(() => {});
-
-    const res = await adminSupabase.storage
-      .from("receipts")
-      .upload(storagePath, file, { contentType: file.type, upsert: true });
-
-    uploadError = res.error;
-  } catch (err: any) {
-    // Fallback to standard client if admin client isn't configured
-    const res = await supabase.storage
-      .from("receipts")
-      .upload(storagePath, file, { contentType: file.type });
-    uploadError = res.error;
-  }
+  // 1. Upload with the user's session so the receipts bucket's tenant-folder
+  // storage policies apply. The bucket is private (see the
+  // receipts_bucket_private migration) — never recreate it as public.
+  const { error: uploadError } = await supabase.storage
+    .from("receipts")
+    .upload(storagePath, file, { contentType: file.type });
 
   if (uploadError) {
     console.error("Storage upload error:", uploadError);
     throw new Error(`Failed to upload file: ${uploadError.message}`);
   }
 
-  // 2. Insert Document record with status='pending'
-  let docRecord: any = null;
-  let docError: any = null;
-
-  const res = await supabase
+  // 2. Insert Document record with status='pending'. No service-role fallback:
+  // if RLS rejects this insert, the rejection is the correct answer.
+  const { data: docRecord, error: docError } = await supabase
     .from("documents")
     .insert({
       tenant_id: activeTenantId,
@@ -67,33 +50,6 @@ export async function uploadDocumentAction(formData: FormData) {
     })
     .select()
     .single();
-
-  docRecord = res.data;
-  docError = res.error;
-
-  // Fallback to admin client if schema cache or RLS prevents standard insert
-  if (docError) {
-    try {
-      const { createAdminClient } = await import("@/lib/supabase/admin");
-      const adminSupabase = createAdminClient();
-      const adminRes = await adminSupabase
-        .from("documents")
-        .insert({
-          tenant_id: activeTenantId,
-          uploaded_by: userData.user.id,
-          storage_path: storagePath,
-          doc_type: "receipt",
-          status: "pending",
-        })
-        .select()
-        .single();
-
-      docRecord = adminRes.data;
-      docError = adminRes.error;
-    } catch (adminErr) {
-      console.warn("Admin insert fallback error:", adminErr);
-    }
-  }
 
   if (docError || !docRecord) {
     throw new Error(`Failed to save document record: ${docError?.message}`);
@@ -127,6 +83,14 @@ export async function verifyAndPostExpenseAction(payload: {
   const { activeTenantId } = await loadTenantContext();
   if (!activeTenantId) {
     throw new Error("No active workspace");
+  }
+  // Without this, a $0/blank amount (e.g. a document still being read) reached
+  // the DB and surfaced as a raw "violates check constraint" error.
+  if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
+    throw new Error("Enter the receipt total (more than $0) before posting.");
+  }
+  if (!payload.accountId) {
+    throw new Error("Choose an expense category before posting.");
   }
 
   const supabase = await createClient();

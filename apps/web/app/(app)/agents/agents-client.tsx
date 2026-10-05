@@ -136,7 +136,7 @@ export function AgentsClient({ initialLogs, tenantSettings }: AgentsClientProps)
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Multi-signal AI matcher ($\ge 95\%$ auto-match) with 1-click reversing GL entries.
+            Multi-signal AI matcher (auto-matches at 95%+ confidence) with 1-click reversing GL entries.
           </p>
           <div className="flex items-center gap-1.5 pt-2">
             {[

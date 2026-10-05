@@ -27,10 +27,12 @@ export function InviteForm({ tenantId }: { tenantId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, role, tenantId }),
       });
-      const json = await res.json();
+      // A failed request can come back without a JSON body; don't let that
+      // throw inside the transition (it took down the whole page).
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
 
       if (!res.ok) {
-        setError(json.error ?? "Something went wrong.");
+        setError(json?.error ?? "Something went wrong. Please try again.");
         return;
       }
 

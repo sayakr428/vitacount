@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { extractReceiptData } from "@/lib/ocr";
+import { AUTO_EXECUTE_MIN_LEVEL, getAgentAutonomyLevel } from "@/lib/agent-policy";
 
 export interface ExtractedLineItem {
   description: string;
@@ -131,8 +132,16 @@ export async function runAPBookkeepingAgent(tenantId: string, documentId: string
 
   // 4. Determine Autonomy Policy Outcome
   let autonomyStatus: "auto_posted" | "needs_review" | "failed" = "needs_review";
+  // Below L2 (including after the kill switch) nothing auto-posts; the
+  // document waits in the review queue for a human verify click.
+  const autonomyLevel = await getAgentAutonomyLevel(supabase, tenantId, "ap_bookkeeping_agent");
 
-  if (confidenceScore >= 0.90 && !duplicateDetected && matchedAccountId) {
+  if (
+    autonomyLevel >= AUTO_EXECUTE_MIN_LEVEL &&
+    confidenceScore >= 0.90 &&
+    !duplicateDetected &&
+    matchedAccountId
+  ) {
     autonomyStatus = "auto_posted";
   } else if (confidenceScore < 0.70) {
     autonomyStatus = "failed";
@@ -143,7 +152,9 @@ export async function runAPBookkeepingAgent(tenantId: string, documentId: string
     .from("documents")
     .update({
       doc_type: "receipt",
-      status: autonomyStatus === "auto_posted" ? "verified" : "needs_review",
+      // documents.status has no 'needs_review' (check constraint) — 'extracted'
+      // is the review-queue state the Documents page lists.
+      status: autonomyStatus === "auto_posted" ? "verified" : "extracted",
       ocr_confidence: confidenceScore,
       duplicate_detected: duplicateDetected,
       line_items: lineItems as any,
@@ -198,7 +209,7 @@ export async function runAPBookkeepingAgent(tenantId: string, documentId: string
           account_id: matchedAccountId,
         },
         confidence_score: confidenceScore,
-        autonomy_level: 2,
+        autonomy_level: autonomyLevel,
         status: "auto_executed",
       });
     }
