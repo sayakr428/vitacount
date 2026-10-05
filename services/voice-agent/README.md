@@ -44,6 +44,38 @@ On Windows, if `uv` reports that an Application Control policy blocked its manag
 system interpreter instead:
 `UV_PYTHON_PREFERENCE=only-system uv sync --python "C:/Program Files/Python311/python.exe"`.
 
+## Deploy to Pipecat Cloud
+
+Vercel can't host this service: it's a long-lived WebRTC process. It runs on
+[Pipecat Cloud](https://pipecat.daily.co) from the `Dockerfile` and `pcc-deploy.toml` in this
+folder. The image targets `linux/arm64`, which Pipecat Cloud requires; the CLI builds it for you.
+
+1. Create an account at pipecat.daily.co. Under **Settings → API Keys**, create a **public**
+   key (`pk_…`).
+2. Install the CLI:
+   `uv tool install "pipecat-ai[cli]" --with pipecatcloud`
+   On Windows with App Control, add `--python "C:/Program Files/Python311/python.exe"`.
+   Then sign in with `pipecat cloud auth login`.
+3. Create `.env.cloud` in this folder. It's git- and docker-ignored. Put in it:
+   ```
+   NVIDIA_API_KEY=nvapi-...
+   AGENT_SHARED_SECRET=<exactly the value set in Vercel>
+   NVIDIA_LLM_MODEL=nvidia/nemotron-3-super-120b-a12b
+   NVIDIA_FAST_MODEL=nvidia/nemotron-3-super-120b-a12b
+   NVIDIA_TTS_VOICE=Magpie-Multilingual.EN-US.Aria
+   ```
+   Then upload it: `pipecat cloud secrets set vita-secrets --file .env.cloud --skip`
+4. Deploy from this folder: `pipecat cloud deploy --yes`
+5. In Vercel → Settings → Environment Variables, add `PIPECAT_CLOUD_AGENT=vita` and
+   `PIPECAT_CLOUD_PUBLIC_KEY=pk_…` (Secret type), then redeploy. With these set, the dock
+   talks to `/api/agent/start` and `/api/agent/sessions/*`. Those Vercel routes forward to
+   Pipecat Cloud with the key attached server-side, for signed-in users only, so
+   `NEXT_PUBLIC_AGENT_URL` isn't needed.
+
+Logs: `pipecat cloud agent logs vita`. `min_agents = 0` in `pcc-deploy.toml` means you pay only
+while sessions run, but the first connection after idle is slower. Set it to `1` for an
+always-warm instance.
+
 ## Security model
 
 - The bot only accepts a session that carries the HMAC token minted by `POST /api/agent/session`
